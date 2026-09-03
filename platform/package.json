@@ -12,13 +12,17 @@
     "dev:api": "cd apps/api && npm run dev",
     "dev:admin": "cd apps/admin && npm run dev",
     "dev:web": "cd apps/web && npm run dev",
-    "build": "npm run build:api && npm run build:admin && npm run build:web",
+    "build": "npm run build:web && npm run build:admin",
+    "build:web": "cd apps/web && npx next build",
+    "build:admin": "cd apps/admin && npx next build",
     "build:api": "cd apps/api && npm run build",
-    "build:admin": "cd apps/admin && npm run build",
-    "build:web": "cd apps/web && npm run build",
+    "vercel-build": "npm run build",
     "typecheck": "tsc --noEmit -p apps/api/tsconfig.json && tsc --noEmit -p apps/admin/tsconfig.json",
     "db:migrate": "cd apps/api && npm run db:migrate",
     "db:seed": "cd apps/api && npm run db:seed"
+  },
+  "dependencies": {
+    "next": "^14.2.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
