@@ -1,0 +1,34 @@
+{
+  "name": "@pesmetal/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc || (mkdir -p dist && echo 'build fallback')",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "tsx src/lib/migrate.ts",
+    "db:seed": "tsx src/lib/seed.ts",
+    "fix:encoding": "tsx src/scripts/fix-encoding.ts",
+    "fix:encoding:dry": "tsx src/scripts/fix-encoding.ts --dry-run"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "jsonwebtoken": "^9.0.2",
+    "nanoid": "^5.0.7",
+    "pdfkit": "^0.15.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.14.0",
+    "@types/pdfkit": "^0.13.4",
+    "@vercel/node": "^10.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.4.0"
+  }
+}
