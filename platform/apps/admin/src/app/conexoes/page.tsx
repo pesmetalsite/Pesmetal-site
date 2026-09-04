@@ -21,6 +21,8 @@ export default function ConexoesPage() {
   const [connecting, setConnecting] = useState<string | null>(null)
   const [saved, setSaved] = useState('')
 
+  const showSaved = (msg: string) => { setSaved(msg); setTimeout(() => setSaved(''), 2500) }
+
   const load = async () => {
     setLoading(true)
     try {
