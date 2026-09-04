@@ -65,3 +65,6 @@ SaveClip.App_*
 
 # Mídia do Instagram
 instagram-consecom/
+
+.vercel
+.env*
