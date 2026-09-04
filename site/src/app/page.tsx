@@ -1,8 +1,12 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Shield, Wrench, Cog, HardHat, ArrowRight, Loader2, Menu, X, Phone, MessageCircle, Check, Hammer, Ruler, Truck, Lock } from 'lucide-react'
+import {
+  Hammer, Wrench, Shield, Ruler, Cog, HardHat,
+  ArrowRight, Loader2, Menu, X, MessageCircle,
+  CheckCircle2, Phone, ChevronRight, Star
+} from 'lucide-react'
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://lucid-contentment-production-17bc.up.railway.app'
 const DEFAULT_WA = '5515999999999'
 
 const SERVICES = [
@@ -25,7 +29,12 @@ const PROJECTS = [
 
 export default function Home() {
   const [scrolled, setScrolled] = useState(false)
-  const [company, setCompany] = useState({ company_whatsapp: '', company_name: 'Pes Metal', company_experience_years: '30', company_about: '' })
+  const [company, setCompany] = useState({
+    company_whatsapp: '',
+    company_name: 'Pes Metal',
+    company_experience_years: '30',
+    company_about: ''
+  })
   const [services, setServices] = useState<any[]>([])
   const [projects, setProjects] = useState<any[]>([])
   const [form, setForm] = useState({ name: '', phone: '', email: '', company: '', service: '', description: '' })
@@ -35,8 +44,9 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
-    const h = () => setScrolled(window.scrollY > 40)
-    h(); window.addEventListener('scroll', h)
+    const h = () => setScrolled(window.scrollY > 20)
+    h()
+    window.addEventListener('scroll', h, { passive: true })
     return () => window.removeEventListener('scroll', h)
   }, [])
 
@@ -44,14 +54,14 @@ export default function Home() {
     if (typeof window === 'undefined') return
     document.body.classList.add('fade-ready')
     const obs = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('in-view'); }),
-      { threshold: 0, rootMargin: '0px 0px -8% 0px' }
+      (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('in-view') }),
+      { threshold: 0, rootMargin: '0px 0px -6% 0px' }
     )
     document.querySelectorAll('.fade-up').forEach((el) => obs.observe(el))
     requestAnimationFrame(() => {
       document.querySelectorAll('.fade-up').forEach((el) => {
         const r = (el as HTMLElement).getBoundingClientRect()
-        if (r.top < window.innerHeight) el.classList.add('in-view')
+        if (r.top < window.innerHeight + 50) el.classList.add('in-view')
       })
     })
     return () => obs.disconnect()
@@ -92,7 +102,6 @@ export default function Home() {
 
   const wa = (company.company_whatsapp || DEFAULT_WA).replace(/\D/g, '')
   const waLink = `https://wa.me/${wa}?text=${encodeURIComponent('Olá! Vim pelo site da Pes Metal e gostaria de um orçamento.')}`
-  const waShort = `55${wa.replace(/^55/, '')}`
 
   const track = (label: string) => {
     const session = localStorage.getItem('pesmetal_session')
@@ -111,8 +120,7 @@ export default function Home() {
       const r = await fetch(`${API}/public/leads`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...form,
-          session_token: session,
+          ...form, session_token: session,
           utm_source: p.get('utm_source') || undefined,
           utm_medium: p.get('utm_medium') || undefined,
           utm_campaign: p.get('utm_campaign') || undefined,
@@ -132,13 +140,8 @@ export default function Home() {
       setForm({ name: '', phone: '', email: '', company: '', service: '', description: '' })
     } catch (e: any) {
       const isOffline = e.message.includes('Failed to fetch') || e.message.includes('NetworkError') || !navigator.onLine
-      if (isOffline) {
-        setFormError('Servidor temporariamente indisponível. Entre em contato pelo WhatsApp.')
-      } else {
-        setFormError(e.message || 'Erro ao enviar. Tente novamente.')
-      }
-    }
-    finally { setSending(false) }
+      setFormError(isOffline ? 'Servidor indisponível. Entre em contato pelo WhatsApp.' : e.message || 'Erro ao enviar.')
+    } finally { setSending(false) }
   }
 
   const allServices = services.length > 0 ? services : SERVICES
@@ -163,7 +166,7 @@ export default function Home() {
             <a href="#projetos">Projetos</a>
             <a href="#contato">Contato</a>
             <a href={waLink} target="_blank" rel="noopener" className="nav-wa" onClick={() => track('header')}>
-              <MessageCircle size={16} /> WhatsApp
+              <MessageCircle size={15} /> WhatsApp
             </a>
           </nav>
           <button onClick={() => setMenuOpen(!menuOpen)} className="menu-btn" aria-label="Menu">
@@ -172,23 +175,48 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Mobile nav */}
+      {menuOpen && (
+        <div className="mobile-nav open" onClick={() => setMenuOpen(false)}>
+          <div className="mobile-nav-inner" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
+              <button onClick={() => setMenuOpen(false)}><X size={24} /></button>
+            </div>
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[['#servicos','Serviços'],['#sobre','Empresa'],['#projetos','Projetos'],['#contato','Contato']].map(([href, label]) => (
+                <a key={href} href={href} onClick={() => setMenuOpen(false)} style={{ padding: '12px 0', fontSize: 18, fontWeight: 500, borderBottom: '1px solid var(--border)' }}>{label}</a>
+              ))}
+              <a href={waLink} target="_blank" rel="noopener" className="btn btn-wa" style={{ marginTop: 16, justifyContent: 'center' }}>
+                <MessageCircle size={16} /> Falar no WhatsApp
+              </a>
+            </nav>
+          </div>
+        </div>
+      )}
+
       {/* HERO */}
       <section className="hero">
         <div className="hero-bg" />
         <div className="container">
           <div className="hero-content">
-            <div className="hero-label">Sorocaba/SP · Atendemos todo o Brasil</div>
+            <div className="hero-label">
+              <span>Sorocaba/SP</span>
+              <span style={{ color: 'var(--text-muted)' }}>·</span>
+              <span>Atendemos todo o Brasil</span>
+            </div>
             <h1>
-              Quem trabalha com <span>metal</span>,<br />
-              trabalha com a gente.
+              Quem trabalha com <span className="accent">metal</span>,<br />
+              trabalha com a <span className="blue">gente certa.</span>
             </h1>
             <p className="hero-desc">
-              A Pes Metal fornece caldeiraria, soldagem e usinagem para indústria, mineração e construção civil.
+              Caldeiraria, soldagem e usinagem para indústria, mineração e construção civil.
               Engenharia própria, prazo cumprido, qualidade documentada.
             </p>
             <div className="hero-actions">
-              <a href="#contato" className="btn btn-primary">Solicitar Orçamento <ArrowRight size={16} /></a>
-              <a href={waLink} target="_blank" rel="noopener" className="btn btn-wa" onClick={() => track('hero')}>
+              <a href="#contato" className="btn btn-primary">
+                Solicitar Orçamento <ArrowRight size={16} />
+              </a>
+              <a href={waLink} target="_blank" rel="noopener" className="btn btn-outline" onClick={() => track('hero')}>
                 <MessageCircle size={18} /> Falar no WhatsApp
               </a>
             </div>
@@ -228,9 +256,12 @@ export default function Home() {
       <section id="servicos" className="section">
         <div className="container">
           <div className="section-header">
-            <div className="eyebrow">Capacidade de produção</div>
-            <h2>Soluções em metalurgia</h2>
-            <p>Da caldeiraria pesada à usinagem de precisão — cobrimos toda a cadeia de fabricação metalúrgica.</p>
+            <div className="eyebrow">
+              <span className="eyebrow-dot" />
+              Capacidade de produção
+            </div>
+            <h2>Soluções em metalurgia pesada</h2>
+            <p>Da caldeiraria pesada à usinagem de precisão — cobrimos toda a cadeia de fabricação metalúrgica com qualidade documentada.</p>
           </div>
 
           <div className="services-grid">
@@ -243,10 +274,15 @@ export default function Home() {
                   <div className="service-tag">{s.category || def.tag}</div>
                   <h3>{s.name || def.title}</h3>
                   <p>{s.description || def.desc}</p>
-                  <div className="progress-line" />
                 </div>
               )
             })}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: 48 }}>
+            <a href="#contato" className="btn btn-primary" style={{ display: 'inline-flex' }}>
+              Solicitar orçamento <ChevronRight size={16} />
+            </a>
           </div>
         </div>
       </section>
@@ -255,8 +291,11 @@ export default function Home() {
       <section id="sobre" className="section section-alt">
         <div className="container">
           <div className="about-grid">
-            <div className="about-text">
-              <div className="eyebrow">{years} anos de história</div>
+            <div className="about-text fade-up">
+              <div className="eyebrow">
+                <span className="eyebrow-dot" />
+                {years} anos de história
+              </div>
               <h2>Fornecedor de referência para a indústria pesada</h2>
               <p>
                 {company.company_about ||
@@ -265,28 +304,28 @@ export default function Home() {
 
               <ul className="qual-list">
                 <li>
-                  <span className="q-mark"></span>
+                  <span className="q-icon"><CheckCircle2 size={14} /></span>
                   <div className="q-text">
                     <h4>Soldadores qualificados</h4>
                     <p>Procedimentos de soldagem qualificados (EPS) conforme normas técnicas aplicáveis.</p>
                   </div>
                 </li>
                 <li>
-                  <span className="q-mark"></span>
+                  <span className="q-icon"><CheckCircle2 size={14} /></span>
                   <div className="q-text">
                     <h4>Controle dimensional</h4>
                     <p>Instrumentação de precisão para verificação de tolerâncias e geometrias críticas.</p>
                   </div>
                 </li>
                 <li>
-                  <span className="q-mark"></span>
+                  <span className="q-icon"><CheckCircle2 size={14} /></span>
                   <div className="q-text">
                     <h4>Prazo cumprido</h4>
                     <p>Gestão de projeto com cronograma detalhado. Seguimos o prazo combinado.</p>
                   </div>
                 </li>
                 <li>
-                  <span className="q-mark"></span>
+                  <span className="q-icon"><CheckCircle2 size={14} /></span>
                   <div className="q-text">
                     <h4>Qualidade documentada</h4>
                     <p>Inspeção visual, dimensional e registros fotográficos antes da expedição.</p>
@@ -295,7 +334,7 @@ export default function Home() {
               </ul>
             </div>
 
-            <div className="about-img-wrap">
+            <div className="about-img-wrap fade-up">
               <img src="/images/soldador-precisao.jpg" alt="Soldador profissional" loading="lazy" />
               <div className="about-year">
                 <div className="num">{years}+</div>
@@ -310,8 +349,11 @@ export default function Home() {
       <section id="projetos" className="section">
         <div className="container">
           <div className="section-header">
-            <div className="eyebrow">Portfólio</div>
-            <h2>Projetos recentes</h2>
+            <div className="eyebrow">
+              <span className="eyebrow-dot" />
+              Portfólio
+            </div>
+            <h2>Projetos que falam por nós</h2>
             <p>Cada peça é produzida para atender à especificação técnica do cliente. Sem improviso.</p>
           </div>
 
@@ -324,7 +366,7 @@ export default function Home() {
               return (
                 <div key={i} className="project-card fade-up">
                   <img src={img} alt={title} loading="lazy" />
-                  <div className="project-info">
+                  <div className="project-overlay">
                     <div className="project-cat">{cat}</div>
                     <h3>{title}</h3>
                   </div>
@@ -341,7 +383,9 @@ export default function Home() {
           <h2>Tem um projeto em mãos?</h2>
           <p>Envie a descrição, foto ou desenho técnico. Nossa equipe avalia e retorna em até 24 horas úteis.</p>
           <div className="cta-btns">
-            <a href="#contato" className="btn btn-primary">Preencher formulário</a>
+            <a href="#contato" className="btn btn-primary">
+              Preencher formulário <ArrowRight size={16} />
+            </a>
             <a href={waLink} target="_blank" rel="noopener" className="btn btn-wa" onClick={() => track('cta')}>
               <MessageCircle size={18} /> Falar agora
             </a>
@@ -353,20 +397,38 @@ export default function Home() {
       <section id="contato" className="section form-section">
         <div className="container">
           <div className="section-header">
-            <div className="eyebrow">Solicitar orçamento</div>
+            <div className="eyebrow">
+              <span className="eyebrow-dot" />
+              Solicitar orçamento
+            </div>
             <h2>Envie seu projeto</h2>
             <p>Análise técnica sem compromisso. Respondemos em até 24 horas úteis.</p>
           </div>
 
           <div className="form-grid">
-            <div className="form-aside">
+            <div className="form-aside fade-up">
               <h3>O que você recebe</h3>
               <ul className="form-list">
-                <li>Análise técnica da sua solicitação</li>
-                <li>Orçamento detalhado por item</li>
-                <li>Prazo de entrega proposto</li>
-                <li>Condições de pagamento</li>
-                <li>Suporte técnico durante a execução</li>
+                <li>
+                  <span className="check-icon"><CheckCircle2 size={12} /></span>
+                  Análise técnica da sua solicitação
+                </li>
+                <li>
+                  <span className="check-icon"><CheckCircle2 size={12} /></span>
+                  Orçamento detalhado por item
+                </li>
+                <li>
+                  <span className="check-icon"><CheckCircle2 size={12} /></span>
+                  Prazo de entrega proposto
+                </li>
+                <li>
+                  <span className="check-icon"><CheckCircle2 size={12} /></span>
+                  Condições de pagamento
+                </li>
+                <li>
+                  <span className="check-icon"><CheckCircle2 size={12} /></span>
+                  Suporte técnico durante a execução
+                </li>
               </ul>
 
               <div className="contact-box">
@@ -378,10 +440,10 @@ export default function Home() {
               </div>
             </div>
 
-            <form className="form-card" onSubmit={submit}>
+            <form className="form-card fade-up" onSubmit={submit}>
               {success && (
                 <div className="form-success">
-                  <strong>Solicitação enviada.</strong> Nossa equipe entrará em contato em breve.
+                  <strong>Solicitação enviada!</strong> Nossa equipe entrará em contato em breve.
                 </div>
               )}
               {formError && <div className="form-error">{formError}</div>}
@@ -389,7 +451,7 @@ export default function Home() {
               <div className="form-row">
                 <div className="form-field">
                   <label>Nome completo</label>
-                  <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Seu nome" />
+                  <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Seu nome completo" />
                 </div>
                 <div className="form-field">
                   <label>Telefone / WhatsApp</label>
@@ -423,7 +485,7 @@ export default function Home() {
                 <label>Descreva seu projeto</label>
                 <textarea required value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Detalhes do projeto, dimensões aproximadas, materiais, quantidade, prazo desejado…" rows={4} />
               </div>
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={sending}>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} disabled={sending}>
                 {sending ? (
                   <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Enviando…</>
                 ) : (
@@ -443,12 +505,12 @@ export default function Home() {
               <div className="logo" style={{ marginBottom: 20 }}>
                 <div className="logo-mark">PM</div>
                 <div>
-                  <div className="logo-name">PES METAL</div>
+                  <div className="logo-name" style={{ color: '#fff' }}>PES METAL</div>
                   <div className="logo-tagline">Caldeiraria · Soldagem · Usinagem</div>
                 </div>
               </div>
-              <p style={{ color: 'var(--text-muted)', fontSize: 14, maxWidth: 280, lineHeight: 1.6 }}>
-                {years}+ anos fornecendo soluções em caldeiraria, soldagem e usinagem para indústria pesada.
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, maxWidth: 280, lineHeight: 1.7 }}>
+                {years}+ anos fornecendo soluções em caldeiraria, soldagem e usinagem para indústria pesada em todo o Brasil.
               </p>
             </div>
             <div>
@@ -480,15 +542,14 @@ export default function Home() {
           </div>
           <div className="footer-bottom">
             <span>© {new Date().getFullYear()} Pes Metal</span>
-            <span>Sorocaba/SP</span>
+            <span>Sorocaba/SP · Atendemos todo o Brasil</span>
             <a
-              href="https://admin-aa3i2dqz9-consecom.vercel.app"
+              href="https://pesmetal-admin.vercel.app"
               target="_blank"
               rel="noopener"
-              className="footer-admin-link"
-              aria-label="Acesso restrito"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.3)', fontSize: 12 }}
             >
-              <Lock size={12} /> Acesso restrito
+              Acesso restrito
             </a>
           </div>
         </div>
@@ -496,12 +557,8 @@ export default function Home() {
 
       {/* WA FLOAT */}
       <a href={waLink} target="_blank" rel="noopener" className="wa-float" aria-label="WhatsApp" onClick={() => track('float')}>
-        <MessageCircle size={26} />
+        <MessageCircle size={28} />
       </a>
-
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
     </>
   )
 }
