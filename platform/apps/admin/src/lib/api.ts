@@ -4,6 +4,13 @@ export async function api(path: string, opts: RequestInit = {}, token?: string) 
   const headers: any = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${API_URL}${path}`, { ...opts, headers });
+  if (res.status === 401) {
+    // Token expirado/inválido — limpa sessão e força novo login
+    if (typeof window !== 'undefined' && !path.startsWith('/auth/')) {
+      clearToken();
+      window.location.href = '/login?expired=1';
+    }
+  }
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try { msg = (await res.json()).error || msg; } catch {}

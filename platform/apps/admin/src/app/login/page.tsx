@@ -1,15 +1,17 @@
 'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react'
 import { api, setToken, setUser } from '@/lib/api'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const search = useSearchParams()
+  const expired = search.get('expired') === '1'
   const [email, setEmail] = useState('admin@pesmetal.local')
   const [password, setPassword] = useState('pesmetal123')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(expired ? 'Sua sessão expirou. Faça login novamente.' : '')
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -128,5 +130,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   )
 }
