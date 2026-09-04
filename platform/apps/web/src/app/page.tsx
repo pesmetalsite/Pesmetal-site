@@ -479,8 +479,7 @@ export default function Home() {
             </div>
           </div>
           <div className="footer-bottom">
-            <span>© {new Date().getFullYear()} Pes Metal</span>
-            <span>Sorocaba/SP</span>
+            <span style={{ color: 'rgba(255,255,255,0.35)' }}>© {new Date().getFullYear()} Pes Metal · Sorocaba/SP</span>
             <a
               href="https://admin-aa3i2dqz9-consecom.vercel.app"
               target="_blank"
