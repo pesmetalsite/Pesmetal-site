@@ -17,9 +17,9 @@ export default function DashboardPage() {
   useEffect(() => {
     Promise.all([
       api('/dashboard/metrics', {}, getToken()!),
-      api('/dashboard/leads-by-period', {}, getToken!()).catch(() => ({ data: [] })),
-      api('/dashboard/leads-by-source', {}, getToken!()).catch(() => ({ data: [] })),
-      api('/dashboard/funnel', {}, getToken!()).catch(() => ({ data: [] })),
+      api('/dashboard/leads-by-period', {}, getToken()!).catch(() => ({ data: [] })),
+      api('/dashboard/leads-by-source', {}, getToken()!).catch(() => ({ data: [] })),
+      api('/dashboard/funnel', {}, getToken()!).catch(() => ({ data: [] })),
     ]).then(([m, p, s, f]) => {
       setMetrics(m.metrics)
       setByPeriod(p.data || [])
