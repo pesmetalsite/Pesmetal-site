@@ -15,6 +15,27 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
   const path = url.pathname;
   const method = req.method;
 
+  // GET /whatsapp/webhook-url — retorna a URL do webhook esperado
+  if (path === '/whatsapp/webhook-url' && method === 'GET') {
+    const baseUrl = process.env.API_BASE_URL || `https://lucid-contentment-production-17bc.up.railway.app`;
+    return json(res, 200, { url: `${baseUrl}/webhook/evolution` });
+  }
+
+  // POST /whatsapp/webhook-url — configura o webhook na Evolution API
+  if (path === '/whatsapp/webhook-url' && method === 'POST') {
+    const baseUrl = process.env.API_BASE_URL || `https://lucid-contentment-production-17bc.up.railway.app`;
+    const webhookUrl = `${baseUrl}/webhook/evolution`;
+    try {
+      await Evolution.setWebhook({
+        url: webhookUrl,
+        events: ['messages.upsert', 'connection.update'],
+      });
+      return json(res, 200, { ok: true, url: webhookUrl });
+    } catch (err: any) {
+      return json(res, 502, { error: 'Falha ao configurar webhook na Evolution API', detail: String(err?.message || err) });
+    }
+  }
+
   // GET /whatsapp/status
   if (path === '/whatsapp/status' && method === 'GET') {
     const state = await Evolution.getConnectionState();
@@ -25,7 +46,7 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
   if (path === '/whatsapp/conversations' && method === 'GET') {
     const q = getQuery(url);
     const conversations = ConversationRepository.list({
-      status: q.status, assigned_user_id: q.assigned_user_id, search: q.search,
+      status: q.status, assigned_user_id: q.assigned_user_id, search: q.search, stage_id: q.stage_id,
     });
     return json(res, 200, { conversations });
   }
@@ -50,7 +71,7 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
       await Evolution.sendText({ number, text: body.text });
       const id = MessageRepository.insert({
         conversation_id: msgsMatch[1], direction: 'outgoing', type: 'text',
-        content: body.text, status: 'sent', sent_by: user.id,
+        content: body.text, status: 'sent', sent_by_user_id: user.id,
       });
       ConversationRepository.update(msgsMatch[1], { last_message_at: new Date().toISOString() });
       return json(res, 201, { id, status: 'sent' });

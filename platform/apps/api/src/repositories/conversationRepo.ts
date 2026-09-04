@@ -29,7 +29,7 @@ export interface MessageRow {
   media_url: string | null;
   media_mime: string | null;
   status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'received';
-  sent_by: string | null;
+  sent_by_user_id: string | null;
   error: string | null;
   metadata: string | null;
   created_at: string;
@@ -66,7 +66,7 @@ export const ConversationRepository = {
     params.push(id);
     db.prepare(`UPDATE whatsapp_conversations SET ${sets.join(', ')} WHERE id = ?`).run(...params);
   },
-  list(filter: { status?: string; assigned_user_id?: string; search?: string } = {}): any[] {
+  list(filter: { status?: string; assigned_user_id?: string; search?: string; stage_id?: string } = {}): any[] {
     const where: string[] = ['1=1'];
     const params: any[] = [];
     if (filter.status) { where.push('wc.status = ?'); params.push(filter.status); }
@@ -75,6 +75,7 @@ export const ConversationRepository = {
       where.push('(c.name LIKE ? OR c.phone LIKE ?)');
       params.push(`%${filter.search}%`, `%${filter.search}%`);
     }
+    if (filter.stage_id) { where.push('l.stage_id = ?'); params.push(filter.stage_id); }
     return db.prepare(`
       SELECT wc.*, c.name as contact_name, c.phone as contact_phone,
              l.name as lead_name, l.stage_id, ps.name as stage_name, ps.color as stage_color
@@ -95,11 +96,11 @@ export const MessageRepository = {
   insert(data: Partial<MessageRow> & Pick<MessageRow, 'conversation_id' | 'direction' | 'type'>): string {
     const id = data.id || `msg_${crypto.randomUUID().slice(0, 16)}`;
     db.prepare(`INSERT INTO whatsapp_messages
-                (id, external_id, conversation_id, direction, type, content, media_url, media_mime, status, sent_by, error, metadata)
+                (id, external_id, conversation_id, direction, type, content, media_url, media_mime, status, sent_by_user_id, error, metadata)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(id, data.external_id ?? null, data.conversation_id, data.direction, data.type,
         data.content ?? null, data.media_url ?? null, data.media_mime ?? null,
-        data.status ?? 'pending', data.sent_by ?? null, data.error ?? null, data.metadata ?? null);
+        data.status ?? 'pending', data.sent_by_user_id ?? null, data.error ?? null, data.metadata ?? null);
     return id;
   },
   listByConversation(conversationId: string): MessageRow[] {

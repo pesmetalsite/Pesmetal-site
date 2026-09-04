@@ -9,6 +9,8 @@ export default function WhatsAppConnectPage() {
   const [status, setStatus] = useState<{ state: string; configured: boolean; error?: string }>({ state: 'unknown', configured: false })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [webhookConfigured, setWebhookConfigured] = useState(false)
+  const [configuringWebhook, setConfiguringWebhook] = useState(false)
 
   const fetchStatus = async () => {
     try {
@@ -36,6 +38,21 @@ export default function WhatsAppConnectPage() {
       setError(e.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const configureWebhook = async () => {
+    setConfiguringWebhook(true)
+    setError('')
+    try {
+      const r = await fetch('/api/whatsapp/webhook-url', { method: 'POST' })
+      const data = await r.json()
+      if (data.ok) setWebhookConfigured(true)
+      else setError(data.error || 'Falha ao configurar webhook')
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setConfiguringWebhook(false)
     }
   }
 
@@ -113,6 +130,30 @@ export default function WhatsAppConnectPage() {
           {status.error && (
             <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
               {status.error}
+            </div>
+          )}
+
+          {/* Webhook Config */}
+          {!webhookConfigured && (
+            <div className="mt-4 p-3 bg-bg-0 border border-border rounded-lg">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-text-dim">
+                  <strong className="text-text)">Receber mensagens</strong>
+                  <br />Configure o webhook para receber mensagens do WhatsApp no sistema.
+                </div>
+                <button
+                  onClick={configureWebhook}
+                  disabled={configuringWebhook || !status.configured}
+                  className="btn btn-primary btn-sm flex items-center gap-2"
+                >
+                  {configuringWebhook ? 'Configurando...' : '⟳ Configurar Webhook'}
+                </button>
+              </div>
+            </div>
+          )}
+          {webhookConfigured && (
+            <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-400 flex items-center gap-2">
+              ✓ Webhook configurado — mensagens de entrada serão recebidas
             </div>
           )}
         </div>
