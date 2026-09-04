@@ -196,29 +196,54 @@ export default function Home() {
 
       {/* HERO */}
       <section className="hero">
-        <div className="hero-bg" />
-        <div className="container">
+        <div className="hero-grid">
           <div className="hero-content">
-            <div className="hero-label">
-              <span>Sorocaba/SP</span>
-              <span style={{ color: 'var(--text-muted)' }}>·</span>
-              <span>Atendemos todo o Brasil</span>
+            <div className="hero-badge">
+              <span className="hero-badge-dot" />
+              <span>Há {years}+ anos no mercado · Sorocaba/SP</span>
             </div>
-            <h1>
-              Quem trabalha com <span className="accent">metal</span>,<br />
-              trabalha com a <span className="blue">gente certa.</span>
+
+            <h1 className="hero-title">
+              Caldeiraria pesada,<br />
+              <span className="hero-title-accent">soldagem especializada</span><br />
+              e usinagem CNC.
             </h1>
+
             <p className="hero-desc">
-              Caldeiraria, soldagem e usinagem para indústria, mineração e construção civil.
-              Engenharia própria, prazo cumprido, qualidade documentada.
+              Fornecedor de referência para indústria, mineração e construção civil.
+              Engenharia própria, prazo cumprido, qualidade documentada — entregue onde
+              o seu projeto precisa.
             </p>
+
             <div className="hero-actions">
               <a href="#contato" className="btn btn-primary">
                 Solicitar Orçamento <ArrowRight size={16} />
               </a>
-              <a href={waLink} target="_blank" rel="noopener" className="btn btn-outline" onClick={() => track('hero')}>
+              <a href={waLink} target="_blank" rel="noopener" className="btn btn-wa" onClick={() => track('hero')}>
                 <MessageCircle size={18} /> Falar no WhatsApp
               </a>
+            </div>
+
+            <div className="hero-trust">
+              <div className="hero-trust-item">
+                <CheckCircle2 size={16} />
+                <span>Resposta em <strong>24h úteis</strong></span>
+              </div>
+              <div className="hero-trust-item">
+                <CheckCircle2 size={16} />
+                <span>Atendemos <strong>todo o Brasil</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div className="hero-visual">
+            <div className="hero-img-wrap">
+              <img src="/images/hero-soldagem.jpg" alt="Soldagem industrial Pes Metal" loading="eager" />
+              <div className="hero-img-overlay" />
+              <div className="hero-floating-card">
+                <div className="hero-floating-num">{years}+</div>
+                <div className="hero-floating-label">Anos de<br />experiência</div>
+              </div>
             </div>
           </div>
         </div>
