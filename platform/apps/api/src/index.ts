@@ -22,6 +22,7 @@ import { quotesRouter } from './routes/quotes.js';
 import { settingsRouter } from './routes/settings.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { publicRouter } from './routes/public.js';
+import { instancesRouter } from './routes/instances.js';
 import { webhookHandler } from './routes/webhook.js';
 import { uploadRouter } from './routes/upload.js';
 
@@ -33,6 +34,7 @@ await ensureAdminUser();
 
 const routes: Array<{ prefix: string; handler: (req: any, res: any, url: URL) => any; authRequired?: boolean }> = [
   { prefix: '/webhook/', handler: webhookHandler },
+  { prefix: '/instances', handler: instancesRouter },
   { prefix: '/public/', handler: publicRouter },
   { prefix: '/auth/', handler: authRouter },
   { prefix: '/upload', handler: uploadRouter },

@@ -268,4 +268,25 @@ CREATE TABLE IF NOT EXISTS integration_settings (
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS whatsapp_instances (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    phone TEXT,
+    instance_name TEXT NOT NULL,
+    evolution_api_url TEXT,
+    evolution_api_key TEXT,
+    webhook_url TEXT,
+    webhook_events TEXT DEFAULT '["messages.upsert","connection.update"]',
+    is_default INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'disconnected',
+    qr_code_base64 TEXT,
+    qr_expires_at TEXT,
+    connected_at TEXT,
+    error TEXT,
+    active INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 `;

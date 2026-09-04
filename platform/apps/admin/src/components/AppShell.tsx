@@ -5,6 +5,7 @@ import Link from 'next/link'
 import {
   LayoutDashboard, Users, KanbanSquare, MessageSquare, CalendarDays,
   Zap, FileText, Wrench, Building2, TrendingUp, Settings, LogOut,
+  Link2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { api, getToken, getUser, clearToken } from '@/lib/api'
@@ -18,6 +19,7 @@ const NAV = [
     { path: '/agenda', label: 'Agenda', icon: CalendarDays },
   ]},
   { section: 'Gestão', items: [
+    { path: '/conexoes', label: 'Conexões', icon: Link2 },
     { path: '/automacoes', label: 'Automações', icon: Zap },
     { path: '/orcamentos', label: 'Orçamentos', icon: FileText },
     { path: '/servicos', label: 'Serviços', icon: Wrench },

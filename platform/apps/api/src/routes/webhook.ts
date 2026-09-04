@@ -41,6 +41,27 @@ export async function webhookHandler(req: any, res: any, url: URL) {
     return json(res, 200, { ok: true, endpoint: 'evolution', method: 'POST expected' });
   }
 
+  // GET/POST /webhook/evolution/:instanceId — webhook de instância específica
+  const instMatch = path.match(/^\/webhook\/evolution\/([a-zA-Z0-9_]+)$/);
+  if (instMatch) {
+    if (req.method === 'GET') {
+      return json(res, 200, { ok: true, endpoint: 'evolution-instance', instanceId: instMatch[1], method: 'POST expected' });
+    }
+    if (req.method === 'POST') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+      let body: any;
+      try { body = await readBody(req); } catch { return; }
+      try {
+        body._instanceId = instMatch[1];
+        await handleEvolutionEvent(body);
+      } catch (e: any) {
+        logger.error('webhook multi-instance failed', { instanceId: instMatch[1], error: String(e?.message || e) });
+      }
+      return;
+    }
+  }
+
   return json(res, 404, { error: 'Webhook não encontrado' });
 }
 
