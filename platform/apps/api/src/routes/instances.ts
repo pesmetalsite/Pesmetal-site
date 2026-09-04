@@ -27,23 +27,23 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
   if (path === '/instances' && method === 'POST') {
     if (user.role === 'atendente') throw ApiError.forbidden();
     const body = await readBody(req);
-    if (!body.name?.trim() || !body.instance_name?.trim()) {
-      throw ApiError.validation('name e instance_name sao obrigatorios');
+    if (!body.name?.trim()) {
+      throw ApiError.validation('name e obrigatorio');
     }
+    const instanceName = body.instance_name?.trim() || body.name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + crypto.randomUUID().slice(0, 8);
     const id = `inst_${crypto.randomUUID().slice(0, 16)}`;
     db.prepare(`
       INSERT INTO whatsapp_instances (id, name, sender_name, instance_name, description, phone,
         evolution_api_url, evolution_api_key, is_default, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'disconnected')
     `).run(
-      id, body.name.trim(), body.sender_name?.trim() || body.name.trim(),
-      body.instance_name.trim(),
+      id, body.name.trim(), body.sender_name?.trim() || body.name.trim(), instanceName,
       body.description || null, body.phone || null,
       body.evolution_api_url || process.env.EVOLUTION_API_URL || null,
       body.evolution_api_key || process.env.EVOLUTION_API_KEY || null,
       body.is_default ? 1 : 0,
     );
-    return json(res, 201, { id });
+    return json(res, 201, { id, instance_name: instanceName });
   }
 
   // GET /instances/:id
