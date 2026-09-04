@@ -3,6 +3,7 @@
  */
 import { json, readBody, getQuery } from '../lib/http.js';
 import { authenticate } from '../lib/auth.js';
+import { db } from '../lib/db.js';
 import { ConversationRepository, MessageRepository } from '../repositories/conversationRepo.js';
 import { ContactRepository } from '../repositories/contactRepo.js';
 import { Evolution } from '../services/evolution.js';
@@ -67,8 +68,10 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
     const contact = ContactRepository.findById(conv.contact_id);
     if (!contact) throw ApiError.notFound('Contato');
     const number = formatNumber(contact.phone);
+    const senderName = getSenderNameForConversation(msgsMatch[1]);
+    const prefixedText = senderName ? `*${senderName}*\n${body.text}` : body.text;
     try {
-      await Evolution.sendText({ number, text: body.text });
+      await Evolution.sendText({ number, text: prefixedText });
       const id = MessageRepository.insert({
         conversation_id: msgsMatch[1], direction: 'outgoing', type: 'text',
         content: body.text, status: 'sent', sent_by_user_id: user.id,
@@ -90,6 +93,13 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
 
   throw ApiError.notFound('Endpoint WhatsApp');
 });
+
+function getSenderNameForConversation(convId: string): string | null {
+  const conv = ConversationRepository.findById(convId);
+  if (!conv?.lead_id) return null;
+  const lead = (db as any).prepare(`SELECT name, phone FROM leads WHERE id = ?`).get(conv.lead_id) as any;
+  return lead?.name || null;
+}
 
 function formatNumber(phone: string) {
   const digits = (phone || '').replace(/\D/g, '');

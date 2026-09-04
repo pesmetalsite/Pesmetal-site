@@ -15,7 +15,7 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
   // GET /instances — lista todas instâncias
   if (path === '/instances' && method === 'GET') {
     const rows = db.prepare(`
-      SELECT id, name, description, phone, instance_name, webhook_url,
+      SELECT id, name, sender_name, description, phone, instance_name, webhook_url,
              webhook_events, is_default, status, connected_at, error,
              active, created_at, updated_at
       FROM whatsapp_instances WHERE active = 1 ORDER BY is_default DESC, created_at ASC
@@ -32,11 +32,12 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
     }
     const id = `inst_${crypto.randomUUID().slice(0, 16)}`;
     db.prepare(`
-      INSERT INTO whatsapp_instances (id, name, instance_name, description, phone,
+      INSERT INTO whatsapp_instances (id, name, sender_name, instance_name, description, phone,
         evolution_api_url, evolution_api_key, is_default, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'disconnected')
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'disconnected')
     `).run(
-      id, body.name.trim(), body.instance_name.trim(),
+      id, body.name.trim(), body.sender_name?.trim() || body.name.trim(),
+      body.instance_name.trim(),
       body.description || null, body.phone || null,
       body.evolution_api_url || process.env.EVOLUTION_API_URL || null,
       body.evolution_api_key || process.env.EVOLUTION_API_KEY || null,
@@ -49,7 +50,7 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
   const idMatch = path.match(/^\/instances\/([^\/]+)$/);
   if (idMatch && method === 'GET') {
     const row = db.prepare(`
-      SELECT id, name, description, phone, instance_name, webhook_url,
+      SELECT id, name, sender_name, description, phone, instance_name, webhook_url,
              webhook_events, is_default, status, connected_at, error,
              active, created_at, updated_at
       FROM whatsapp_instances WHERE id = ? AND active = 1
@@ -62,7 +63,7 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
   if (idMatch && method === 'PUT') {
     if (user.role === 'atendente') throw ApiError.forbidden();
     const body = await readBody(req);
-    const allowed = ['name', 'description', 'phone', 'is_default', 'status',
+    const allowed = ['name', 'sender_name', 'description', 'phone', 'is_default', 'status',
                      'qr_code_base64', 'qr_expires_at', 'connected_at', 'error'];
     const sets: string[] = [];
     const params: any[] = [];
@@ -86,7 +87,7 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
     return json(res, 200, { ok: true });
   }
 
-  // POST /instances/:id/qr
+  // POST /instances/:id/qr — gera QR ou conecta com QR colado
   const qrMatch = path.match(/^\/instances\/([^\/]+)\/qr$/);
   if (qrMatch && method === 'POST') {
     const instId = qrMatch[1];
@@ -104,13 +105,26 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
     process.env.EVOLUTION_API_URL = baseUrl;
     process.env.EVOLUTION_API_KEY = apiKey;
     try {
+      const body = await readBody(req);
+
+      // Se QR foi colado, conecta diretamente
+      if (body?.qr) {
+        const resp = await fetch(`${baseUrl}/instance/connect/${inst.instance_name}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: apiKey },
+          body: JSON.stringify({ qrcode: body.qr }),
+        }).then(r => r.json()).catch(() => ({}));
+        db.prepare(`UPDATE whatsapp_instances SET status = 'connecting', updated_at = datetime('now') WHERE id = ?`).run(instId);
+        return json(res, 200, { ok: true, status: 'connecting', message: 'QR Code aplicado. Aguarde conexão.' });
+      }
+
+      // Gera novo QR via Evolution API
       const { Evolution } = await import('../services/evolution.js');
       const state = await Evolution.getConnectionState();
       if (state.state === 'open') {
         db.prepare(`UPDATE whatsapp_instances SET status = 'connected', connected_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`).run(instId);
         return json(res, 200, { status: 'connected', state });
       }
-      // Gera QR via fetch direto
       const resp = await fetch(`${baseUrl}/instance/connect/${inst.instance_name}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: apiKey },

@@ -271,6 +271,7 @@ CREATE TABLE IF NOT EXISTS integration_settings (
 CREATE TABLE IF NOT EXISTS whatsapp_instances (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    sender_name TEXT,
     description TEXT,
     phone TEXT,
     instance_name TEXT NOT NULL,
