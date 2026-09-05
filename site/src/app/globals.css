@@ -487,6 +487,65 @@ button { cursor: pointer; font-family: inherit; }
 .btn-wa { background: var(--wa); color: #fff; }
 .btn-wa:hover { opacity: 0.9; transform: translateY(-2px); }
 
+/* ========== CREDENTIALS ========== */
+.credentials {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 24px 0;
+}
+.cred-inner {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+.cred-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-weight: 600;
+}
+.cred-items {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.cred-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cred-icon {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent);
+  background: var(--accent-light);
+  border: 1px solid var(--accent-mid);
+  padding: 4px 8px;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+}
+.cred-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.cred-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+}
+@media (max-width: 768px) {
+  .cred-inner { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .cred-divider { display: none; }
+  .cred-items { gap: 12px; }
+}
+
 /* ========== TRUST BAR ========== */
 .trust {
   background: var(--text-primary);

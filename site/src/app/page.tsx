@@ -274,6 +274,41 @@ export default function Home() {
         </div>
       </section>
 
+      {/* CREDENCIAIS */}
+      <div className="credentials">
+        <div className="container">
+          <div className="cred-inner">
+            <span className="cred-label">Padrões &amp; Qualidade</span>
+            <div className="cred-items">
+              <div className="cred-item">
+                <span className="cred-icon">ISO</span>
+                <span className="cred-text">Gestão de Qualidade</span>
+              </div>
+              <div className="cred-divider" />
+              <div className="cred-item">
+                <span className="cred-icon">EPS</span>
+                <span className="cred-text">Procedimentos Qualificados</span>
+              </div>
+              <div className="cred-divider" />
+              <div className="cred-item">
+                <span className="cred-icon">NDT</span>
+                <span className="cred-text">Controle Não Destrutivo</span>
+              </div>
+              <div className="cred-divider" />
+              <div className="cred-item">
+                <span className="cred-icon">CTF</span>
+                <span className="cred-text">Controle Dimensional</span>
+              </div>
+              <div className="cred-divider" />
+              <div className="cred-item">
+                <span className="cred-icon">EPS</span>
+                <span className="cred-text">Soldadores Certificados</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* TRUST BAR */}
       <div className="trust">
         <div className="container">
