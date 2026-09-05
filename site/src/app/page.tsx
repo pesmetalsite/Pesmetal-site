@@ -198,21 +198,23 @@ export default function Home() {
       <section className="hero">
         <div className="hero-grid">
           <div className="hero-content">
-            <div className="hero-badge">
-              <span className="hero-badge-dot" />
-              <span>Há {years}+ anos no mercado · Sorocaba/SP</span>
+            <div className="hero-meta">
+              <span className="hero-meta-num">30+</span>
+              <span className="hero-meta-text">anos<br />no mercado</span>
+              <span className="hero-meta-divider" />
+              <span className="hero-meta-text">Sorocaba/SP<br />atende Brasil</span>
             </div>
 
             <h1 className="hero-title">
-              Caldeiraria pesada,<br />
-              <span className="hero-title-accent">soldagem especializada</span><br />
-              e usinagem CNC.
+              O metal que sustenta<br />
+              a indústria <span className="hero-title-accent">pesada</span><br />
+              do Brasil.
             </h1>
 
             <p className="hero-desc">
-              Fornecedor de referência para indústria, mineração e construção civil.
-              Engenharia própria, prazo cumprido, qualidade documentada — entregue onde
-              o seu projeto precisa.
+              Caldeiraria, soldagem especializada e usinagem CNC para quem não pode parar.
+              Da engenharia ao acabamento — controle dimensional, EPS qualificado e
+              entrega no prazo.
             </p>
 
             <div className="hero-actions">
@@ -224,25 +226,48 @@ export default function Home() {
               </a>
             </div>
 
-            <div className="hero-trust">
-              <div className="hero-trust-item">
-                <CheckCircle2 size={16} />
-                <span>Resposta em <strong>24h úteis</strong></span>
-              </div>
-              <div className="hero-trust-item">
-                <CheckCircle2 size={16} />
-                <span>Atendemos <strong>todo o Brasil</strong></span>
-              </div>
+            <div className="hero-clients">
+              <span className="hero-clients-label">Atendemos</span>
+              <span className="hero-clients-list">
+                <span>Indústria</span>
+                <span>·</span>
+                <span>Mineração</span>
+                <span>·</span>
+                <span>Construção Civil</span>
+                <span>·</span>
+                <span>Siderurgia</span>
+              </span>
             </div>
           </div>
 
           <div className="hero-visual">
-            <div className="hero-img-wrap">
+            <div className="hero-img-frame">
               <img src="/images/hero-soldagem.jpg" alt="Soldagem industrial Pes Metal" loading="eager" />
-              <div className="hero-img-overlay" />
-              <div className="hero-floating-card">
-                <div className="hero-floating-num">{years}+</div>
-                <div className="hero-floating-label">Anos de<br />experiência</div>
+            </div>
+
+            <div className="hero-stamp">
+              <svg viewBox="0 0 100 100" className="hero-stamp-svg">
+                <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="1" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="1" />
+                <text x="50" y="32" textAnchor="middle" className="hero-stamp-text">·  PES METAL  ·</text>
+                <text x="50" y="50" textAnchor="middle" className="hero-stamp-num">30</text>
+                <text x="50" y="62" textAnchor="middle" className="hero-stamp-text">ANOS</text>
+                <text x="50" y="76" textAnchor="middle" className="hero-stamp-small">DESDE 1993</text>
+              </svg>
+            </div>
+
+            <div className="hero-spec-card">
+              <div className="hero-spec-row">
+                <span className="hero-spec-label">Capacidade</span>
+                <span className="hero-spec-value">até 20 ton</span>
+              </div>
+              <div className="hero-spec-row">
+                <span className="hero-spec-label">Soldagem</span>
+                <span className="hero-spec-value">MIG/TIG/EPS</span>
+              </div>
+              <div className="hero-spec-row">
+                <span className="hero-spec-label">Prazo</span>
+                <span className="hero-spec-value">24h resp.</span>
               </div>
             </div>
           </div>
