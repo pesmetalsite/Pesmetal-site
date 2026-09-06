@@ -591,7 +591,7 @@ export default function Home() {
                 <div className="logo-mark">PM</div>
                 <div>
                   <div className="logo-name" style={{ color: '#fff' }}>PES METAL</div>
-                  <div className="logo-tagline">Caldeiraria · Soldagem · Usinagem</div>
+                  <div className="logo-tagline" style={{ color: 'rgba(255,255,255,0.7)' }}>Caldeiraria · Soldagem · Usinagem</div>
                 </div>
               </div>
               <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, maxWidth: 280, lineHeight: 1.7 }}>

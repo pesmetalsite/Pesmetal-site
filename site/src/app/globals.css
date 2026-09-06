@@ -11,9 +11,9 @@
   --bg-card: #FFFFFF;
 
   /* Texto */
-  --text-primary: #111827;
-  --text-secondary: #4B5563;
-  --text-muted: #9CA3AF;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
 
   /* Borda */
   --border: #E5E7EB;
@@ -345,7 +345,7 @@ button { cursor: pointer; font-family: inherit; }
   right: -20px;
   width: 130px;
   height: 130px;
-  color: var(--accent);
+  color: var(--accent-hover);
   z-index: 3;
   animation: rotate 60s linear infinite;
 }
@@ -363,7 +363,7 @@ button { cursor: pointer; font-family: inherit; }
 .hero-stamp-text {
   font-family: var(--font-mono);
   font-size: 8px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.2em;
   fill: currentColor;
 }
@@ -371,14 +371,14 @@ button { cursor: pointer; font-family: inherit; }
 .hero-stamp-num {
   font-family: var(--font-heading);
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 900;
   fill: currentColor;
 }
 
 .hero-stamp-small {
   font-family: var(--font-mono);
   font-size: 6px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.15em;
   fill: currentColor;
 }
@@ -577,9 +577,9 @@ button { cursor: pointer; font-family: inherit; }
   font-family: var(--font-heading);
   font-size: 11px;
   font-weight: 800;
-  color: var(--accent);
-  background: var(--accent-light);
-  border: 1px solid var(--accent-mid);
+  color: #fff;
+  background: var(--accent);
+  border: 1px solid var(--accent);
   padding: 4px 8px;
   border-radius: 3px;
   letter-spacing: 0.05em;
@@ -624,8 +624,8 @@ button { cursor: pointer; font-family: inherit; }
   background-clip: text;
 }
 .trust-label {
-  font-size: 13px; color: rgba(255,255,255,0.5);
-  margin-top: 6px; letter-spacing: 0.04em;
+  font-size: 13px; color: rgba(255,255,255,0.75);
+  margin-top: 6px; letter-spacing: 0.04em; font-weight: 500;
 }
 
 /* Divisor com ícone */
@@ -793,8 +793,8 @@ button { cursor: pointer; font-family: inherit; }
   padding: 24px;
 }
 .project-cat {
-  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
-  color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: #fff; letter-spacing: 0.12em; text-transform: uppercase;
   margin-bottom: 6px;
 }
 .project-overlay h3 { font-size: 17px; color: #fff; font-weight: 600; }
@@ -920,22 +920,22 @@ button { cursor: pointer; font-family: inherit; }
   margin-bottom: 48px;
 }
 .footer-grid h4 {
-  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
-  color: rgba(255,255,255,0.4); letter-spacing: 0.12em; text-transform: uppercase;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: #fff; letter-spacing: 0.12em; text-transform: uppercase;
   margin-bottom: 20px;
 }
 .footer-grid ul { list-style: none; }
 .footer-grid li { margin-bottom: 12px; }
-.footer-grid a, .footer-grid span { color: rgba(255,255,255,0.6); font-size: 14px; transition: color 0.2s; }
+.footer-grid a, .footer-grid span { color: rgba(255,255,255,0.75); font-size: 14px; transition: color 0.2s; }
 .footer-grid a:hover { color: #fff; }
 .footer-bottom {
   border-top: 1px solid rgba(255,255,255,0.08); padding-top: 28px;
   display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
-  font-size: 13px; color: rgba(255,255,255,0.35); font-family: var(--font-mono); letter-spacing: 0.04em;
+  font-size: 13px; color: rgba(255,255,255,0.55); font-family: var(--font-mono); letter-spacing: 0.04em;
 }
 .footer-admin-link {
   display: inline-flex; align-items: center; gap: 6px;
-  color: rgba(255,255,255,0.3); opacity: 0.7;
+  color: rgba(255,255,255,0.45); opacity: 0.85;
   transition: opacity 0.2s, color 0.2s;
 }
 .footer-admin-link:hover { opacity: 1; color: var(--accent); }
