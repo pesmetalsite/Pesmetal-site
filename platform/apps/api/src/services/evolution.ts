@@ -5,7 +5,7 @@
  */
 import { nanoid } from 'nanoid';
 
-const INSTANCE = process.env.EVOLUTION_INSTANCE || 'pesmetal-main';
+const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || 'pesmetal-main';
 
 // Lê env vars em cada chamada (lazy read) para refletir mudanças de configuração
 // sem depender do momento do import do módulo. Railway reinicia o container ao
@@ -43,21 +43,26 @@ async function call(path: string, method: string, body?: any) {
   return res.json();
 }
 
-export const Evolution = {
-  instance: INSTANCE,
+// Resolve o nome de instância: parâmetro explícito > env default
+function resolveInstance(name?: string): string {
+  return name || DEFAULT_INSTANCE;
+}
 
-  async getConnectionState() {
-    if (!getBaseUrl() || !getApiKey()) return { state: 'unconfigured', instance: INSTANCE };
+export const Evolution = {
+  instance: DEFAULT_INSTANCE,
+
+  async getConnectionState(instanceName?: string) {
+    if (!getBaseUrl() || !getApiKey()) return { state: 'unconfigured', instance: resolveInstance(instanceName) };
     try {
-      const r = await call(`/instance/connectionState/${INSTANCE}`, 'GET');
-      return { state: r?.instance?.state ?? 'unknown', instance: INSTANCE };
+      const r = await call(`/instance/connectionState/${resolveInstance(instanceName)}`, 'GET');
+      return { state: r?.instance?.state ?? 'unknown', instance: resolveInstance(instanceName) };
     } catch (e: any) {
-      return { state: 'error', instance: INSTANCE, error: String(e?.message || e) };
+      return { state: 'error', instance: resolveInstance(instanceName), error: String(e?.message || e) };
     }
   },
 
   async sendText({ number, text, delay }: SendTextInput) {
-    return call(`/message/sendText/${INSTANCE}`, 'POST', {
+    return call(`/message/sendText/${DEFAULT_INSTANCE}`, 'POST', {
       number,
       text,
       delay: delay ?? 0,
@@ -65,7 +70,7 @@ export const Evolution = {
   },
 
   async sendMedia({ number, mediaType, media, fileName, caption }: SendMediaInput) {
-    return call(`/message/sendMedia/${INSTANCE}`, 'POST', {
+    return call(`/message/sendMedia/${DEFAULT_INSTANCE}`, 'POST', {
       number,
       mediatype: mediaType,
       media,
@@ -76,14 +81,14 @@ export const Evolution = {
 
   async sendPresence(number: string, presence: 'composing' | 'recording' | 'paused') {
     try {
-      return call(`/message/sendPresence/${INSTANCE}`, 'POST', { number, presence });
+      return call(`/message/sendPresence/${DEFAULT_INSTANCE}`, 'POST', { number, presence });
     } catch {
       return null;
     }
   },
 
-  async setWebhook({ url, events, enabled = true }: { url: string; events: string[]; enabled?: boolean }) {
-    return call(`/webhook/set/${INSTANCE}`, 'POST', {
+  async setWebhook({ url, events, enabled = true, instanceName }: { url: string; events: string[]; enabled?: boolean; instanceName?: string }) {
+    return call(`/webhook/set/${resolveInstance(instanceName)}`, 'POST', {
       url,
       webhook_by_events: false,
       events,
@@ -92,7 +97,7 @@ export const Evolution = {
   },
 
   async findMessages({ number, limit = 20 }: { number: string; limit?: number }) {
-    return call(`/chat/findMessages/${INSTANCE}`, 'POST', { where: { key: { remoteJid: number } }, limit });
+    return call(`/chat/findMessages/${DEFAULT_INSTANCE}`, 'POST', { where: { key: { remoteJid: number } }, limit });
   },
 };
 

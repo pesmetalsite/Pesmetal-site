@@ -120,7 +120,7 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
 
       // Gera novo QR via Evolution API
       const { Evolution } = await import('../services/evolution.js');
-      const state = await Evolution.getConnectionState();
+      const state = await Evolution.getConnectionState(inst.instance_name);
       if (state.state === 'open') {
         db.prepare(`UPDATE whatsapp_instances SET status = 'connected', connected_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`).run(instId);
         return json(res, 200, { status: 'connected', state });
@@ -164,7 +164,7 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
       const { Evolution } = await import('../services/evolution.js');
       const apiBase = process.env.API_BASE_URL || `https://lucid-contentment-production-17bc.up.railway.app`;
       const webhookUrl = `${apiBase}/webhook/evolution/${instId}`;
-      await Evolution.setWebhook({ url: webhookUrl, events: ['messages.upsert', 'connection.update'] });
+      await Evolution.setWebhook({ url: webhookUrl, events: ['messages.upsert', 'connection.update'], instanceName: inst.instance_name });
       db.prepare(`UPDATE whatsapp_instances SET webhook_url = ?, updated_at = datetime('now') WHERE id = ?`).run(webhookUrl, instId);
       return json(res, 200, { ok: true, webhookUrl });
     } finally {
