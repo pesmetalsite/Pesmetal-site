@@ -57,6 +57,10 @@ export const publicRouter = asyncHandler(async (req, res, url) => {
       const svc = ServiceRepository.findBySlug(body.service_slug);
       service_id = svc?.id;
     }
+    if (!service_id && body.service) {
+      const svc = ServiceRepository.findByName(body.service);
+      service_id = svc?.id;
+    }
 
     const { lead_id, contact_id, is_new } = createLead({
       ...body, source: 'site_form',

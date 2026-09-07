@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://pesmetal.com.br'),
   title: 'Pes Metal — Caldeiraria & Soldagem Industrial | Sorocaba/SP',
   description: 'Há mais de 30 anos fabricando caldeiraria pesada, soldagem especializada, usinagem de precisão e projetos industriais em Sorocaba/SP. Indústria, mineração e construção civil em todo o Brasil.',
   keywords: 'caldeiraria pesada, caldeiraria sorocaba, soldagem industrial, usinagem, fabricação industrial, projetos industriais, recuperação de caçambas, dentes CASE, Pes Metal',

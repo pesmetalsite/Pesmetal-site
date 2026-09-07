@@ -40,7 +40,7 @@ async function call(path: string, method: string, body?: any) {
     const text = await res.text();
     throw new Error(`Evolution API ${res.status}: ${text}`);
   }
-  return res.json();
+  return res.json() as any;
 }
 
 // Resolve o nome de instância: parâmetro explícito > env default

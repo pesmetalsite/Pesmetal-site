@@ -1,4 +1,4 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://lucid-contentment-production-17bc.up.railway.app';
 
 export async function api(path: string, opts: RequestInit = {}, token?: string) {
   const headers: any = { 'Content-Type': 'application/json', ...(opts.headers || {}) };

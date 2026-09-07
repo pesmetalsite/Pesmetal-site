@@ -129,7 +129,7 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: apiKey },
         body: JSON.stringify({ webhookUrl: inst.webhook_url || '' }),
-      }).then(r => r.json());
+      }).then(r => r.json()) as any;
       const qr = resp?.qrcode?.[0] || resp?.base64 || null;
       const expires = qr ? new Date(Date.now() + 60000).toISOString() : null;
       if (qr) {

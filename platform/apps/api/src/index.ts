@@ -5,7 +5,7 @@
 
 import http from 'node:http';
 import { URL } from 'node:url';
-import { migrate } from './lib/db.js';
+import { migrate, seedDefaults } from './lib/db.js';
 import { ensureAdminUser } from './lib/auth.js';
 import { logger } from './lib/logger.js';
 import { ApiError, serializeError } from './lib/errors.js';
@@ -30,6 +30,7 @@ const PORT = parseInt(process.env.PORT || '4000');
 const START = Date.now();
 
 await migrate();
+await seedDefaults();
 await ensureAdminUser();
 
 const routes: Array<{ prefix: string; handler: (req: any, res: any, url: URL) => any; authRequired?: boolean }> = [

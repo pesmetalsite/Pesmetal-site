@@ -16,6 +16,7 @@ export const ServiceRepository = {
   },
   findById(id: string): ServiceRow | undefined { return db.prepare(`SELECT * FROM services WHERE id = ?`).get(id) as ServiceRow | undefined; },
   findBySlug(slug: string): ServiceRow | undefined { return db.prepare(`SELECT * FROM services WHERE slug = ?`).get(slug) as ServiceRow | undefined; },
+  findByName(name: string): ServiceRow | undefined { return db.prepare(`SELECT * FROM services WHERE LOWER(name) = LOWER(?) LIMIT 1`).get(name) as ServiceRow | undefined; },
   insert(d: Partial<ServiceRow> & Pick<ServiceRow, 'name' | 'slug'>): string {
     const id = d.id || `srv_${crypto.randomUUID().slice(0, 8)}`;
     db.prepare(`INSERT INTO services (id, name, slug, description, image, category, position) VALUES (?, ?, ?, ?, ?, ?, ?)`)
@@ -46,7 +47,7 @@ export const ProjectRepository = {
     return db.prepare(`SELECT * FROM projects ${q} ORDER BY featured DESC, date DESC`).all() as ProjectRow[];
   },
   findById(id: string): ProjectRow | undefined { return db.prepare(`SELECT * FROM projects WHERE id = ?`).get(id) as ProjectRow | undefined; },
-  insert(d: Partial<ProjectRow> & Pick<ProjectRow, 'name' | 'slug'>): string {
+  insert(d: Omit<Partial<ProjectRow>, 'images' | 'featured'> & Pick<ProjectRow, 'name' | 'slug'> & { images?: string[]; featured?: boolean | number }): string {
     const id = d.id || `proj_${crypto.randomUUID().slice(0, 8)}`;
     db.prepare(`INSERT INTO projects (id, name, slug, description, category, client, images, featured, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(id, d.name, d.slug, d.description ?? null, d.category ?? null, d.client ?? null, d.images ? JSON.stringify(d.images) : null, d.featured ? 1 : 0, d.date ?? null);
@@ -109,7 +110,7 @@ export interface QuoteRow {
 export const QuoteRepository = {
   list(): QuoteRow[] { return db.prepare(`SELECT * FROM quotes ORDER BY created_at DESC`).all() as QuoteRow[]; },
   findById(id: string): QuoteRow | undefined { return db.prepare(`SELECT * FROM quotes WHERE id = ?`).get(id) as QuoteRow | undefined; },
-  insert(d: Partial<QuoteRow> & Pick<QuoteRow, 'lead_id' | 'title'>): { id: string; number: string } {
+  insert(d: Omit<Partial<QuoteRow>, 'items'> & Pick<QuoteRow, 'lead_id' | 'title'> & { items?: any[] }): { id: string; number: string } {
     const id = d.id || `q_${crypto.randomUUID().slice(0, 16)}`;
     const number = d.number || `ORC-${Date.now().toString().slice(-6)}`;
     db.prepare(`INSERT INTO quotes (id, number, lead_id, user_id, title, description, amount, valid_until, status, notes, items) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -131,7 +132,7 @@ export const QuoteRepository = {
 
 // === Lead Events ===
 export const LeadEventRepository = {
-  insert(d: { lead_id: string; user_id?: string | null; type: string; payload?: any; description?: string }): string {
+  insert(d: { lead_id: string | null; user_id?: string | null; type: string; payload?: any; description?: string }): string {
     const id = `ev_${crypto.randomUUID().slice(0, 16)}`;
     db.prepare(`INSERT INTO lead_events (id, lead_id, user_id, type, payload, description) VALUES (?, ?, ?, ?, ?, ?)`)
       .run(id, d.lead_id, d.user_id ?? null, d.type, d.payload ? JSON.stringify(d.payload) : null, d.description ?? null);

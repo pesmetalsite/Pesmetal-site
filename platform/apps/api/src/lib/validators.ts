@@ -162,6 +162,7 @@ export const PublicLeadSchema = z.object({
   company: z.string().optional(),
   service_id: z.string().optional(),
   service_slug: z.string().optional(),
+  service: z.string().optional(),
   description: z.string().optional(),
   quantity: z.string().optional(),
   deadline: z.string().optional(),

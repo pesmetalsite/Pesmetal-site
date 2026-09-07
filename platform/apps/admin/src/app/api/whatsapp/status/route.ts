@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'https://evolution-api-production-dc3b5.up.railway.app'
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || 'd024ea7bb4eecab457678225503d1b9cef60373d741c10afaeed4ffc59a5fa75'
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || ''
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || 'pesmetal-main'
 
 export async function GET() {

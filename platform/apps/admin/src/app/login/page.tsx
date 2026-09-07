@@ -8,8 +8,8 @@ function LoginForm() {
   const router = useRouter()
   const search = useSearchParams()
   const expired = search.get('expired') === '1'
-  const [email, setEmail] = useState('admin@pesmetal.local')
-  const [password, setPassword] = useState('pesmetal123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(expired ? 'Sua sessão expirou. Faça login novamente.' : '')
 

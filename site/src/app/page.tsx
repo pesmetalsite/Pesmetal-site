@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://lucid-contentment-production-17bc.up.railway.app'
-const DEFAULT_WA = '5515999999999'
+const DEFAULT_WA = '5515998345539'
 
 const SERVICES = [
   { icon: Hammer, tag: 'Caldeiraria', title: 'Estruturas Pesadas', desc: 'Bases, pilares, vigas e grandes peças soldadas para mineração, siderurgia e construção civil.' },

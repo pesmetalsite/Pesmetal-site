@@ -175,7 +175,6 @@ async function sendMessage(ctx: HandlerContext, node: Node) {
     type: 'text',
     content: text,
     status: 'pending',
-    sent_by: 'automation',
   });
   try {
     await Evolution.sendText({ number, text });
