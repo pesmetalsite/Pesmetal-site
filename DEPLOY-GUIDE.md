@@ -36,7 +36,7 @@ Sistema completo de captação de leads, CRM e automação WhatsApp para Pes Met
 | Sistema | Usuário | Senha |
 |---------|---------|-------|
 | Admin | `admin@pesmetal.local` | `pesmetal123` |
-| Evolution API | (configurado via env) | `d024ea7...fa75` |
+| Evolution API | (configurado via env) | `<definido no Railway>` |
 
 ⚠️ **IMPORTANTE:** Troque a senha padrão antes de usar em produção.
 

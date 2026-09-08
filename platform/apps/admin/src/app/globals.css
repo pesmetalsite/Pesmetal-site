@@ -9,6 +9,7 @@
   /* Backgrounds */
   --bg-0: #f7f8fa;     /* canvas */
   --bg-1: #ffffff;     /* surface / card */
+  --bg-card: #ffffff;  /* alias (compat modal) */
   --bg-2: #f1f3f5;     /* raised */
   --bg-3: #e9ecef;     /* overlay */
 
@@ -287,4 +288,24 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   .sidebar.open { left: 0; box-shadow: 0 0 30px rgba(16, 24, 40, 0.2); }
   .content { padding: 16px; }
   .header { padding: 12px 16px; }
+  /* grids fixos viram coluna única no mobile */
+  div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+  div[style*="grid-template-columns: 2fr 1fr 1fr"] { grid-template-columns: 1fr !important; }
+}
+
+/* Conversas — central de atendimento responsiva */
+.conv-grid {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 280px;
+  gap: 16px;
+  height: calc(100vh - 120px);
+}
+@media (max-width: 1100px) {
+  .conv-grid { grid-template-columns: 280px minmax(0, 1fr); }
+  .conv-grid .conv-col-details { display: none; }
+}
+@media (max-width: 768px) {
+  .conv-grid { grid-template-columns: 1fr; height: auto; }
+  .conv-grid .conv-col-list { max-height: 40vh; }
+  .conv-grid .conv-col-chat { height: calc(100vh - 220px); }
 }

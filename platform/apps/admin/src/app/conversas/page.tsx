@@ -88,8 +88,8 @@ export default function ConversasPage() {
   return (
     <AppShell title="Conversas WhatsApp">
       {loading ? <div className="loading">Carregando…</div> : (
-        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr 280px', gap: 16, height: 'calc(100vh - 120px)' }}>
-          <div className="card" style={{ padding: 0, overflowY: 'auto' }}>
+<div className="conv-grid">
+          <div className="card conv-col-list" style={{ padding: 0, overflowY: 'auto' }}>
             <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
               <button className="btn btn-ghost btn-sm" onClick={syncHistory} disabled={syncing} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
@@ -160,7 +160,7 @@ export default function ConversasPage() {
             ))}
           </div>
 
-          <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="card conv-col-chat" style={{ display: 'flex', flexDirection: 'column' }}>
             {!active ? <div className="empty">Selecione uma conversa</div> : (
               <>
                 <div style={{ padding: '0 0 12px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -199,12 +199,14 @@ export default function ConversasPage() {
             )}
           </div>
 
-          <div className="card">
+          <div className="card conv-col-details">
             {active ? (
               <>
                 <h3 style={{ fontSize: 13, marginBottom: 12 }}>Detalhes</h3>
-                <Detail label="Lead" value={active.lead_id} />
-                <Detail label="Etapa" value={active.stage_name} />
+                <Detail label="Contato" value={active.contact_name || active.contact_phone || '—'} />
+                <Detail label="Telefone" value={active.contact_phone || '—'} />
+                <Detail label="Lead" value={active.lead_name || active.lead_id || '—'} />
+                <Detail label="Etapa" value={active.stage_name || '—'} />
                 <Detail label="Status" value={active.status} />
                 <Detail label="Automação" value={active.automation_status} />
                 <Detail label="Responsável" value={active.assigned_user_id || '—'} />
