@@ -63,7 +63,7 @@ export const publicRouter = asyncHandler(async (req, res, url) => {
     }
 
     const { lead_id, contact_id, is_new } = await createLead({
-      ...body, source: 'site_form',
+      ...body, service_id, source: 'site_form',
       tracking: { ...tracking, id: sessionId } as any,
     });
 
