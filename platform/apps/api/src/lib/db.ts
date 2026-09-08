@@ -70,6 +70,7 @@ export async function migrate(): Promise<void> {
     `ALTER TABLE automations ADD COLUMN IF NOT EXISTS initial_message text`,
     `ALTER TABLE automations ADD COLUMN IF NOT EXISTS options text`,
     `ALTER TABLE automations ADD COLUMN IF NOT EXISTS invalid_message text`,
+    `ALTER TABLE leads ADD COLUMN IF NOT EXISTS last_activity_at timestamptz`,
   ];
   for (const sql of alters) {
     try {

@@ -1,19 +1,53 @@
 'use client'
 import { useEffect, useState } from 'react'
 import AppShell from '@/components/AppShell'
-import { api, getToken } from '@/lib/api'
+import { api, getToken, setToken, getUser } from '@/lib/api'
 
 export default function ConfiguracoesPage() {
   const [company, setCompany] = useState<any>({})
   const [saved, setSaved] = useState('')
 
+  const [account, setAccount] = useState<any>({ name: '', email: '' })
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [accountMsg, setAccountMsg] = useState<{ text: string; error: boolean } | null>(null)
+
   useEffect(() => {
     api('/settings/company', {}, getToken()!).then((c) => setCompany(c.settings))
+    const u = getUser()
+    if (u) setAccount({ name: u.name || '', email: u.email || '' })
   }, [])
 
   const saveCompany = async () => {
     await api('/settings/company', { method: 'PUT', body: JSON.stringify(company) }, getToken()!)
     setSaved('Configurações da empresa salvas'); setTimeout(() => setSaved(''), 2500)
+  }
+
+  const saveAccount = async () => {
+    setAccountMsg(null)
+    try {
+      const res = await api('/auth/me', { method: 'PUT', body: JSON.stringify({ name: account.name, email: account.email }) }, getToken()!)
+      if (res?.token) setToken(res.token)
+      setAccountMsg({ text: 'Dados salvos', error: false })
+    } catch (e: any) {
+      setAccountMsg({ text: e.message || 'Erro ao salvar dados', error: true })
+    }
+  }
+
+  const changePassword = async () => {
+    setAccountMsg(null)
+    if (newPassword !== confirmPassword) {
+      setAccountMsg({ text: 'Confirmação não confere', error: true })
+      return
+    }
+    try {
+      await api('/auth/password', { method: 'PUT', body: JSON.stringify({ current_password: currentPassword, new_password: newPassword, confirm_password: confirmPassword }) }, getToken()!)
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('')
+      setAccountMsg({ text: 'Senha alterada', error: false })
+    } catch (e: any) {
+      setAccountMsg({ text: e.message || 'Erro ao alterar senha', error: true })
+    }
   }
 
   return (
@@ -39,6 +73,51 @@ export default function ConfiguracoesPage() {
           <button className="btn btn-primary" onClick={saveCompany}>Salvar</button>
         </div>
       </div>
+
+      <div className="card" style={{ marginTop: 24 }}>
+        <h3 style={{ fontSize: 15, marginBottom: 14 }}>Minha conta</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label className="label">Nome</label>
+            <input className="input" value={account.name || ''} onChange={e => setAccount({ ...account, name: e.target.value })} />
+          </div>
+          <div>
+            <label className="label">E-mail</label>
+            <input className="input" type="email" value={account.email || ''} onChange={e => setAccount({ ...account, email: e.target.value })} />
+          </div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <button className="btn btn-primary" onClick={saveAccount}>Salvar dados</button>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 24 }}>
+        <h3 style={{ fontSize: 15, marginBottom: 14 }}>Alterar senha</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label className="label">Senha atual</label>
+            <input className="input" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
+          </div>
+          <div></div>
+          <div>
+            <label className="label">Nova senha</label>
+            <input className="input" type="password" placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Confirmar nova senha</label>
+            <input className="input" type="password" placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+          </div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <button className="btn btn-primary" onClick={changePassword}>Alterar senha</button>
+        </div>
+      </div>
+
+      {accountMsg && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, background: accountMsg.error ? 'var(--danger)' : 'var(--success)', color: 'white', padding: '10px 16px', borderRadius: 6, fontWeight: 600 }}>
+          {accountMsg.text}
+        </div>
+      )}
 
       {saved && <div style={{ position: 'fixed', bottom: 24, right: 24, background: 'var(--success)', color: 'white', padding: '10px 16px', borderRadius: 6, fontWeight: 600 }}>{saved}</div>}
     </AppShell>

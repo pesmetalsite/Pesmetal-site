@@ -66,26 +66,38 @@ export const ConversationRepository = {
     params.push(id);
     await qe(`UPDATE whatsapp_conversations SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
   },
-  async list(filter: { status?: string; assigned_user_id?: string; search?: string; stage_id?: string } = {}): Promise<any[]> {
+  async list(filter: { status?: string; assigned_user_id?: string; search?: string; stage_id?: string; lead_id?: string; unread?: boolean; limit?: number; offset?: number } = {}): Promise<{ conversations: any[]; total: number }> {
     const where: string[] = ['1=1'];
     const params: any[] = [];
     if (filter.status) { where.push(`wc.status = $${params.length + 1}`); params.push(filter.status); }
     if (filter.assigned_user_id) { where.push(`wc.assigned_user_id = $${params.length + 1}`); params.push(filter.assigned_user_id); }
+    if (filter.unread) { where.push(`wc.unread_count > 0`); }
     if (filter.search) {
-      where.push(`(c.name LIKE $${params.length + 1} OR c.phone LIKE $${params.length + 2})`);
-      params.push(`%${filter.search}%`, `%${filter.search}%`);
+      where.push(`(c.name LIKE $${params.length + 1} OR c.phone LIKE $${params.length + 2} OR c.company LIKE $${params.length + 3})`);
+      const s = `%${filter.search}%`;
+      params.push(s, s, s);
     }
     if (filter.stage_id) { where.push(`l.stage_id = $${params.length + 1}`); params.push(filter.stage_id); }
-    return q(`
-      SELECT wc.*, c.name as contact_name, c.phone as contact_phone,
-             l.name as lead_name, l.stage_id, ps.name as stage_name, ps.color as stage_color
+    if (filter.lead_id) { where.push(`wc.lead_id = $${params.length + 1}`); params.push(filter.lead_id); }
+    const base = `
       FROM whatsapp_conversations wc
       JOIN contacts c ON c.id = wc.contact_id
       LEFT JOIN leads l ON l.id = wc.lead_id
       LEFT JOIN pipeline_stages ps ON ps.id = l.stage_id
       WHERE ${where.join(' AND ')}
-      ORDER BY wc.last_message_at DESC NULLS LAST
-    `, params);
+    `;
+    const totalRow = (await q1(`SELECT COUNT(*)::int AS total ${base}`, params)) as any;
+    const total = totalRow?.total ?? 0;
+    const limit = Math.min(Math.max(filter.limit ?? 50, 1), 200);
+    const offset = Math.max(filter.offset ?? 0, 0);
+    const rows = await q(`
+      SELECT wc.*, c.name as contact_name, c.phone as contact_phone, c.company as contact_company,
+             l.name as lead_name, l.stage_id, ps.name as stage_name, ps.color as stage_color
+      ${base}
+      ORDER BY COALESCE(wc.last_message_at, wc.created_at) DESC NULLS LAST
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+    `, [...params, limit, offset]);
+    return { conversations: rows, total };
   },
 };
 
@@ -104,8 +116,15 @@ await qe(`INSERT INTO whatsapp_messages
         data.created_at ?? null]);
     return id;
   },
-  async listByConversation(conversationId: string): Promise<MessageRow[]> {
-    return (await q(`SELECT * FROM whatsapp_messages WHERE conversation_id = $1 ORDER BY created_at ASC`, [conversationId])) as MessageRow[];
+  async listByConversation(conversationId: string, opts: { limit?: number; offset?: number; oldestFirst?: boolean } = {}): Promise<MessageRow[]> {
+    const limit = Math.min(Math.max(opts.limit ?? 50, 1), 500);
+    const offset = Math.max(opts.offset ?? 0, 0);
+    const order = opts.oldestFirst ? 'created_at ASC, id ASC' : 'created_at DESC, id DESC';
+    return (await q(`SELECT * FROM whatsapp_messages WHERE conversation_id = $1 ORDER BY ${order} LIMIT $2 OFFSET $3`, [conversationId, limit, offset])) as MessageRow[];
+  },
+  async countByConversation(conversationId: string): Promise<number> {
+    const row = (await q1(`SELECT COUNT(*)::int AS total FROM whatsapp_messages WHERE conversation_id = $1`, [conversationId])) as any;
+    return row?.total ?? 0;
   },
   async updateStatus(id: string, status: MessageRow['status']): Promise<void> {
     await qe(`UPDATE whatsapp_messages SET status = $1 WHERE id = $2`, [status, id]);

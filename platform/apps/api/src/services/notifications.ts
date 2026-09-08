@@ -16,6 +16,8 @@ export interface CreateNotificationInput {
   /** Se informado e não duplicado, registra também um lead_event do mesmo tipo. */
   eventType?: string | null;
   eventDescription?: string | null;
+  /** Ignora o dedupe por janela (usado para mensagens distintas que devem notificar sempre). */
+  skipDedupe?: boolean;
 }
 
 export interface NotificationRow {
@@ -36,7 +38,7 @@ export async function createNotification(input: CreateNotificationInput): Promis
   if (input.leadId) data.lead_id = input.leadId;
   const dataStr = Object.keys(data).length ? JSON.stringify(data) : null;
 
-  if (input.leadId) {
+  if (input.leadId && !input.skipDedupe) {
     const dup = await q1(`
       SELECT id FROM notifications
       WHERE type = $1 AND title = $2 AND read = 0

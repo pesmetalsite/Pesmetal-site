@@ -40,6 +40,7 @@ export interface LeadRow {
   quantity: string | null;
   deadline: string | null;
   notes: string | null;
+  last_activity_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -132,7 +133,7 @@ export const LeadRepository = {
       LEFT JOIN services s ON s.id = l.service_id
       LEFT JOIN users u ON u.id = l.assigned_user_id
       WHERE ${where.join(' AND ')}
-      ORDER BY l.created_at DESC
+      ORDER BY COALESCE(l.last_activity_at, l.created_at) DESC, l.created_at DESC
     `, params)) as LeadWithRelations[];
   },
 
@@ -140,7 +141,7 @@ export const LeadRepository = {
     const allowed: (keyof LeadRow)[] = [
       'name', 'company', 'email', 'phone', 'interest', 'priority',
       'estimated_value', 'status', 'notes', 'description', 'quantity',
-      'deadline', 'assigned_user_id', 'service_id', 'stage_id',
+      'deadline', 'assigned_user_id', 'service_id', 'stage_id', 'last_activity_at',
     ];
     const sets: string[] = [];
     const params: any[] = [];

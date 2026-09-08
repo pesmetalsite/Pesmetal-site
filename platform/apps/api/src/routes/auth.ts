@@ -31,6 +31,49 @@ export const authRouter = asyncHandler(async (req, res, url) => {
     return json(res, 200, { user: fresh });
   }
 
+  // PUT /auth/me — altera nome e/ou e-mail do usuário logado
+  if (path === '/auth/me' && method === 'PUT') {
+    const user = await authenticate(req);
+    if (!user) throw ApiError.unauthorized();
+    const body = await readBody(req);
+    if (typeof body !== 'object' || body === null) throw ApiError.validation('body inválido');
+    const fields: string[] = [];
+    const params: any[] = [];
+    if (typeof body.name === 'string' && body.name.trim()) {
+      fields.push(`name = $${params.length + 1}`); params.push(body.name.trim());
+    }
+    if (typeof body.email === 'string' && body.email.trim()) {
+      const email = body.email.trim().toLowerCase();
+      const dup = (await q(`SELECT id FROM users WHERE email = $1 AND id <> $2`, [email, user.id]))[0] as any;
+      if (dup) throw ApiError.validation('E-mail já está em uso');
+      fields.push(`email = $${params.length + 1}`); params.push(email);
+    }
+    if (!fields.length) return json(res, 200, { ok: true, user: await getUserById(user.id) });
+    params.push(user.id);
+    await qe(`UPDATE users SET ${fields.join(', ')} WHERE id = $${params.length}`, params);
+    const fresh = await getUserById(user.id);
+    // Renova o token para manter a sessão consistente
+    const token = fresh ? signToken({ userId: fresh.id, role: fresh.role, email: fresh.email }) : undefined;
+    return json(res, 200, { ok: true, user: fresh, token });
+  }
+
+  // PUT /auth/password — altera a própria senha (exige senha atual)
+  if (path === '/auth/password' && method === 'PUT') {
+    const user = await authenticate(req);
+    if (!user) throw ApiError.unauthorized();
+    const body = await readBody(req);
+    if (!body?.current_password || !body?.new_password) throw ApiError.validation('Senha atual e nova senha são obrigatórias');
+    if (body.new_password.length < 6) throw ApiError.validation('Nova senha deve ter ao menos 6 caracteres');
+    if (body.new_password !== body.confirm_password) throw ApiError.validation('Confirmação de senha não confere');
+    const stored = (await q(`SELECT password_hash FROM users WHERE id = $1`, [user.id]))[0] as any;
+    if (!stored || !(await verifyPassword(body.current_password, stored.password_hash))) {
+      throw ApiError.unauthorized('Senha atual incorreta');
+    }
+    const hash = await hashPassword(body.new_password);
+    await qe(`UPDATE users SET password_hash = $1 WHERE id = $2`, [hash, user.id]);
+    return json(res, 200, { ok: true, message: 'Senha atualizada com sucesso' });
+  }
+
   if (path === '/auth/register' && method === 'POST') {
     const user = await authenticate(req);
     if (!user || user.role !== 'admin') throw ApiError.forbidden('Apenas admin');

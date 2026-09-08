@@ -162,6 +162,23 @@ async function handleEvolutionEvent(event: any) {
     unread_count: (conv.unread_count || 0) + 1,
   });
 
+  // Atualiza última atividade do lead (reordena o Kanban)
+  if (leadId) {
+    await qe(`UPDATE leads SET last_activity_at = now(), updated_at = now() WHERE id = $1`, [leadId]);
+  }
+
+  // Notificação de nova mensagem (conversa existente) — idempotente por external_id
+  if (!leadWasMissing && leadId) {
+    await createNotification({
+      type: 'new_message',
+      title: `Nova mensagem — ${pushName || phone}`,
+      body: text ? `${text.slice(0, 120)}` : 'Enviou uma nova mensagem.',
+      data: { conversation_id: conv.id, lead_id: leadId, message_id: messageId, phone },
+      leadId,
+      skipDedupe: true,
+    });
+  }
+
   if (conv.automation_status !== 'paused' && conv.status !== 'human') {
     if (conv.automation_status === 'idle') {
       const offHoursMsg = !isBusinessHour() ? await getSetting('automation_off_hours_message') : null;

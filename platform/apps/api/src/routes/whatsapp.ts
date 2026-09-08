@@ -45,13 +45,16 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
     return json(res, 200, { ...state, configured: !!process.env.EVOLUTION_API_URL });
   }
 
-  // GET /whatsapp/conversations
+// GET /whatsapp/conversations
   if (path === '/whatsapp/conversations' && method === 'GET') {
     const q = getQuery(url);
-    const conversations = await ConversationRepository.list({
+    const { conversations, total } = await ConversationRepository.list({
       status: q.status, assigned_user_id: q.assigned_user_id, search: q.search, stage_id: q.stage_id,
+      lead_id: q.lead_id, unread: q.unread === '1' || q.unread === 'true',
+      limit: q.limit ? parseInt(q.limit, 10) : 50,
+      offset: q.offset ? parseInt(q.offset, 10) : 0,
     });
-    return json(res, 200, { conversations });
+    return json(res, 200, { conversations, total, has_more: total > (q.offset ? parseInt(q.offset, 10) : 0) + conversations.length });
   }
 
 // POST /whatsapp/conversations/sync — importa histórico em background (retorna 202 imediato)
@@ -69,9 +72,15 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
   // /whatsapp/conversations/:id/messages
   const msgsMatch = path.match(/^\/whatsapp\/conversations\/([^\/]+)\/messages$/);
   if (msgsMatch && method === 'GET') {
-    const messages = await MessageRepository.listByConversation(msgsMatch[1]);
-    await ConversationRepository.update(msgsMatch[1], { unread_count: 0 });
-    return json(res, 200, { messages });
+    const q = getQuery(url);
+    const limit = q.limit ? parseInt(q.limit, 10) : 50;
+    const offset = q.offset ? parseInt(q.offset, 10) : 0;
+    const oldestFirst = q.oldest_first === '1' || q.oldest_first === 'true';
+    // Mensagens mais recentes primeiro; frontend inverte para exibir (com paginação de histórico).
+    const messages = await MessageRepository.listByConversation(msgsMatch[1], { limit, offset, oldestFirst });
+    const total = await MessageRepository.countByConversation(msgsMatch[1]);
+    if (offset === 0) await ConversationRepository.update(msgsMatch[1], { unread_count: 0 });
+    return json(res, 200, { messages, total, has_more: offset + messages.length < total });
   }
 
   if (msgsMatch && method === 'POST') {

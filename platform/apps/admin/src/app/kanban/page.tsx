@@ -9,13 +9,18 @@ import { useDraggable } from '@dnd-kit/core'
 import AppShell from '@/components/AppShell'
 import { Card, Badge, Loading, Modal } from '@/components/ui'
 import { api, getToken } from '@/lib/api'
-import { formatDate } from '@/lib/utils'
 import { Briefcase, GripVertical, Phone, Building2, Calendar } from 'lucide-react'
-
 interface Lead {
   id: string; name: string; company: string | null; phone: string; email: string | null
   interest: string | null; service_name: string | null; priority: string
   created_at: string; stage_id: string; estimated_value: number; source: string | null
+  last_activity_at?: string | null
+}
+
+function formatDateTime(x?: string | null): string {
+  if (!x) return '—'
+  const d = new Date(x)
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 interface Stage { id: string; name: string; color: string; position: number; is_won?: number; is_lost?: number }
 
@@ -148,9 +153,16 @@ function CardItem({ lead, onClick, dragging }: { lead: Lead; onClick?: () => voi
         {lead.interest && <Badge variant="accent">{lead.interest}</Badge>}
         {lead.service_name && <Badge variant="info">{lead.service_name}</Badge>}
       </div>
-      <div className="flex items-center justify-between text-[10px] text-text-muted">
-        <span className="flex items-center gap-1"><Calendar size={10} /> {formatDate(lead.created_at)}</span>
-        {lead.estimated_value > 0 && <span className="font-bold text-emerald-600">R$ {lead.estimated_value.toLocaleString('pt-BR')}</span>}
+      <div className="space-y-1">
+        <div className="flex items-center gap-1 text-[10px] text-text-muted">
+          <Calendar size={10} />
+          {lead.last_activity_at
+            ? <span>Atividade: {formatDateTime(lead.last_activity_at)}</span>
+            : <span>Entrada: {formatDateTime(lead.created_at)}</span>}
+        </div>
+        <div className="flex items-center justify-between text-[10px] text-text-muted">
+          {lead.estimated_value > 0 && <span className="font-bold text-emerald-600">R$ {lead.estimated_value.toLocaleString('pt-BR')}</span>}
+        </div>
       </div>
     </div>
   )
@@ -158,14 +170,50 @@ function CardItem({ lead, onClick, dragging }: { lead: Lead; onClick?: () => voi
 
 function LeadDetailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
   const [detail, setDetail] = useState<any>(null)
+  const [conversing, setConversing] = useState(false)
+  const [convWarning, setConvWarning] = useState('')
   useEffect(() => {
     api(`/leads/${lead.id}`, {}, getToken()!).then(r => setDetail(r.lead)).catch(() => {})
   }, [lead.id])
+
+  const goConversar = async () => {
+    setConversing(true)
+    setConvWarning('')
+    try {
+      const res = await api(`/whatsapp/conversations?lead_id=${lead.id}&limit=1`, {}, getToken()!)
+      const convs = res.conversations || []
+      if (convs.length > 0) {
+        window.location.href = `/conversas?conversation=${convs[0].id}`
+      } else {
+        setConvWarning('Este lead ainda não possui conversa no WhatsApp')
+      }
+    } catch {
+      setConvWarning('Este lead ainda não possui conversa no WhatsApp')
+    } finally {
+      setConversing(false)
+    }
+  }
 
   return (
     <Modal open onClose={onClose} title={lead.name} size="lg">
       {!detail ? <Loading /> : (
         <div className="space-y-4">
+          <button
+            onClick={goConversar}
+            disabled={conversing}
+            style={{
+              width: '100%', padding: '12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              background: 'var(--brand)', color: '#fff', fontWeight: 700, fontSize: 14,
+              boxShadow: '0 2px 8px rgba(18,140,74,0.25)',
+            }}
+          >
+            {conversing ? 'Buscando…' : '💬 Conversar'}
+          </button>
+          {convWarning && (
+            <div style={{ padding: '10px 14px', borderRadius: 8, background: 'var(--warn)1a', color: '#b45309', fontSize: 13, border: '1px solid rgba(245,158,11,0.35)' }}>
+              {convWarning}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <Field label="Empresa" value={detail.company} />
             <Field label="Telefone" value={detail.phone} />
