@@ -16,7 +16,7 @@ Plataforma comercial completa para a Pes Metal Caldeiraria e Soldagem, construí
 
 ### Acesso admin local
 - Email: `admin@pesmetal.local`
-- Senha: `pesmetal123`
+- Senha: `<SENHA_NAO_VERSIONAR>`
 
 ---
 
@@ -172,7 +172,7 @@ cd "C:/Users/junin/OneDrive/Desktop/PESMETAL/site"
 npm run dev           # → http://localhost:3000
 ```
 
-**Login admin**: `admin@pesmetal.local` / `pesmetal123`
+**Login admin**: `admin@pesmetal.local` / `<SENHA_NAO_VERSIONAR>`
 
 ### Configurar WhatsApp real
 1. Subir Evolution API (Railway, VPS ou local)

@@ -93,7 +93,7 @@ railway up
 ## Credenciais Padrão (criar no primeiro start)
 
 - Email: `admin@pesmetal.local` (configurável via ADMIN_EMAIL)
-- Senha: `pesmetal123` (configurável via ADMIN_PASSWORD)
+- Senha: `<SENHA_NAO_VERSIONAR>` (configurável via ADMIN_PASSWORD)
 
 ⚠️ **Troque a senha padrão antes de ir para produção!**
 
