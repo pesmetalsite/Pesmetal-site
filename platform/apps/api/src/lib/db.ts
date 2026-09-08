@@ -79,6 +79,22 @@ export async function migrate(): Promise<void> {
     `ALTER TABLE whatsapp_conversations ADD COLUMN IF NOT EXISTS human_started_by text`,
     `ALTER TABLE whatsapp_conversations ADD COLUMN IF NOT EXISTS closed_at timestamptz`,
     `ALTER TABLE whatsapp_conversations ADD COLUMN IF NOT EXISTS closed_by text`,
+    `ALTER TABLE quotes ADD COLUMN IF NOT EXISTS contact_id text REFERENCES contacts(id) ON DELETE SET NULL`,
+    `ALTER TABLE quotes ALTER COLUMN lead_id DROP NOT NULL`,
+    `ALTER TABLE quotes ADD COLUMN IF NOT EXISTS conversation_id text`,
+    `ALTER TABLE quotes ADD COLUMN IF NOT EXISTS retention_expires_at timestamptz NOT NULL DEFAULT (now() + interval '15 days')`,
+    `ALTER TABLE quotes ADD COLUMN IF NOT EXISTS sent_at timestamptz`,
+    `ALTER TABLE quotes ADD COLUMN IF NOT EXISTS sent_by text REFERENCES users(id)`,
+    `ALTER TABLE leads ADD COLUMN IF NOT EXISTS document text`,
+    `ALTER TABLE leads ADD COLUMN IF NOT EXISTS address_line text`,
+    `ALTER TABLE leads ADD COLUMN IF NOT EXISTS address_city text`,
+    `ALTER TABLE leads ADD COLUMN IF NOT EXISTS address_state text`,
+    `ALTER TABLE leads ADD COLUMN IF NOT EXISTS address_zip text`,
+    `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS document text`,
+    `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS address_line text`,
+    `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS address_city text`,
+    `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS address_state text`,
+    `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS address_zip text`,
   ];
   for (const sql of alters) {
     try {

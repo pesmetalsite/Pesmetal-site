@@ -102,32 +102,68 @@ export const AppointmentRepository = {
 
 // === Quotes ===
 export interface QuoteRow {
-  id: string; number: string; lead_id: string; user_id: string | null;
+  id: string; number: string; lead_id: string | null; user_id: string | null;
   title: string; description: string | null; amount: number; currency: string;
   valid_until: string | null; status: string; notes: string | null; items: string | null;
+  contact_id: string | null; conversation_id: string | null;
+  retention_expires_at: string; sent_at: string | null; sent_by: string | null;
   created_at: string; updated_at: string;
 }
 export const QuoteRepository = {
-  async list(): Promise<QuoteRow[]> { return (await q(`SELECT * FROM quotes ORDER BY created_at DESC`)) as QuoteRow[]; },
-  async findById(id: string): Promise<QuoteRow | undefined> { return (await q1(`SELECT * FROM quotes WHERE id = $1`, [id])) as QuoteRow | undefined; },
-  async insert(d: Omit<Partial<QuoteRow>, 'items'> & Pick<QuoteRow, 'lead_id' | 'title'> & { items?: any[] }): Promise<{ id: string; number: string }> {
+  async list(filter?: { contact_id?: string; conversation_id?: string; status?: string }): Promise<any[]> {
+    let sql = `SELECT q.*, c.name as contact_name, c.phone as contact_phone, c.custom_name,
+               l.name as lead_name, u.name as user_name
+               FROM quotes q
+               LEFT JOIN contacts c ON c.id = q.contact_id
+               LEFT JOIN leads l ON l.id = q.lead_id
+               LEFT JOIN users u ON u.id = q.user_id WHERE 1=1`;
+    const params: any[] = [];
+    if (filter?.contact_id) { sql += ` AND q.contact_id = $${params.length + 1}`; params.push(filter.contact_id); }
+    if (filter?.conversation_id) { sql += ` AND q.conversation_id = $${params.length + 1}`; params.push(filter.conversation_id); }
+    if (filter?.status) { sql += ` AND q.status = $${params.length + 1}`; params.push(filter.status); }
+    sql += ` ORDER BY q.created_at DESC`;
+    return (await q(sql, params)) as any[];
+  },
+  async findById(id: string): Promise<any> {
+    return (await q1(`SELECT q.*, c.name as contact_name, c.phone as contact_phone, c.custom_name, c.document as contact_document,
+               c.address_line, c.address_city, c.address_state, c.address_zip,
+               l.name as lead_name, u.name as user_name
+               FROM quotes q
+               LEFT JOIN contacts c ON c.id = q.contact_id
+               LEFT JOIN leads l ON l.id = q.lead_id
+               LEFT JOIN users u ON u.id = q.user_id
+               WHERE q.id = $1`, [id])) as any;
+  },
+  async insert(d: any): Promise<{ id: string; number: string }> {
     const id = d.id || `q_${crypto.randomUUID().slice(0, 16)}`;
     const number = d.number || `ORC-${Date.now().toString().slice(-6)}`;
-    await qe(`INSERT INTO quotes (id, number, lead_id, user_id, title, description, amount, valid_until, status, notes, items) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [id, number, d.lead_id, d.user_id ?? null, d.title, d.description ?? null, d.amount ?? 0, d.valid_until ?? null, d.status ?? 'draft', d.notes ?? null, d.items ? JSON.stringify(d.items) : null]);
+    await qe(`INSERT INTO quotes (id, number, lead_id, user_id, title, description, amount, valid_until, status, notes, items, contact_id, conversation_id)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [id, number, d.lead_id ?? null, d.user_id ?? null, d.title, d.description ?? null, d.amount ?? 0,
+       d.valid_until ?? null, d.status ?? 'draft', d.notes ?? null, d.items ? JSON.stringify(d.items) : null,
+       d.contact_id ?? null, d.conversation_id ?? null]);
     return { id, number };
   },
-  async update(id: string, f: Partial<QuoteRow> & { items?: any[] }): Promise<void> {
+  async update(id: string, f: any): Promise<void> {
     const sets: string[] = []; const params: any[] = [];
-    for (const k of ['title','description','amount','valid_until','status','notes'] as const) {
-      if (k in f) { sets.push(`${k} = $${params.length + 1}`); params.push((f as any)[k]); }
+    for (const k of ['title','description','amount','valid_until','status','notes','contact_id','conversation_id']) {
+      if (k in f) { sets.push(`${k} = $${params.length + 1}`); params.push(f[k]); }
     }
-    if ('items' in (f as any)) { sets.push(`items = $${params.length + 1}`); params.push(JSON.stringify((f as any).items || [])); }
+    if ('items' in f) { sets.push(`items = $${params.length + 1}`); params.push(JSON.stringify(f.items || [])); }
     if (!sets.length) return;
     sets.push(`updated_at = now()`); params.push(id);
     await qe(`UPDATE quotes SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
   },
   async delete(id: string): Promise<void> { await qe(`DELETE FROM quotes WHERE id = $1`, [id]); },
+  async markSent(id: string, userId: string): Promise<void> {
+    await qe(`UPDATE quotes SET sent_at = now(), sent_by = $2, status = 'sent', updated_at = now() WHERE id = $1`, [id, userId]);
+  },
+  async findExpiringSoon(days: number = 3): Promise<any[]> {
+    return (await q(`SELECT * FROM quotes WHERE retention_expires_at <= now() + interval '${days} days' AND status NOT IN ('deleted') AND sent_at IS NOT NULL`)) as any[];
+  },
+  async findExpired(): Promise<any[]> {
+    return (await q(`SELECT * FROM quotes WHERE retention_expires_at < now() AND status != 'deleted'`)) as any[];
+  },
 };
 
 // === Lead Events ===

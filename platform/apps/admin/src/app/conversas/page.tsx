@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { api, getToken, getUser } from '@/lib/api'
-import { MessageSquarePlus, Pencil, RefreshCw, Search, Send } from 'lucide-react'
+import { MessageSquarePlus, Pencil, RefreshCw, Search, Send, FileText } from 'lucide-react'
 
 const PAGE = 50
 
@@ -56,6 +57,7 @@ function resolveActive(prev: any, list: any[], openIdRef: { current: string | nu
 }
 
 export default function ConversasPage() {
+  const router = useRouter()
   // --- lista ------------------------------------------------------------
   const [convs, setConvs] = useState<any[]>([])
   const [total, setTotal] = useState(0)
@@ -515,8 +517,23 @@ export default function ConversasPage() {
                     </div>
                   </div>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={takeover}>Assumir humano</button>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    title="Gerar orçamento"
+                    onClick={() => {
+                      const name = encodeURIComponent(displayName(active))
+                      const phone = encodeURIComponent(active.contact_phone || '')
+                      const cid = active.contact_id || ''
+                      const cvid = active.id || ''
+                      router.push(`/orcamentos?novo=1&contact_id=${cid}&contact_name=${name}&contact_phone=${phone}&conversation_id=${cvid}`)
+                    }}
+                  >
+                    <FileText size={14} /> Orçamento
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={takeover}>Assumir humano</button>
                 {active.status === 'human' && <button className="btn btn-primary btn-sm" onClick={finalizar}>Finalizar atendimento</button>}
+                </div>
               </div>
 
               <div className="conv-msgs-wrap">

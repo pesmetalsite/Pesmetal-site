@@ -9,8 +9,6 @@ const nextConfig = {
       { source: '/servicos/:path*', destination: '/', permanent: true },
       { source: '/projetos', destination: '/', permanent: true },
       { source: '/projetos/:path*', destination: '/', permanent: true },
-      { source: '/orcamentos', destination: '/', permanent: true },
-      { source: '/orcamentos/:path*', destination: '/', permanent: true },
       { source: '/whatsapp-connect', destination: '/conexoes', permanent: true },
       { source: '/whatsapp-connect/:path*', destination: '/conexoes', permanent: true },
     ];

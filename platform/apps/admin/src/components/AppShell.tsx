@@ -5,6 +5,7 @@ import Link from 'next/link'
 import {
   LayoutDashboard, MessageSquare, KanbanSquare, CalendarDays,
   Zap, TrendingUp, BarChart3, Link2, Settings, LogOut, Bell, CheckCheck,
+  Users, FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { api, getToken, getUser, clearToken } from '@/lib/api'
@@ -16,6 +17,10 @@ const NAV = [
     { path: '/conversas', label: 'Conversas', icon: MessageSquare },
     { path: '/kanban', label: 'Kanban', icon: KanbanSquare },
     { path: '/agenda', label: 'Agenda', icon: CalendarDays },
+  ]},
+  { section: 'Comercial', items: [
+    { path: '/clientes', label: 'Clientes', icon: Users },
+    { path: '/orcamentos', label: 'Orçamentos', icon: FileText },
   ]},
   { section: 'Gestão', items: [
     { path: '/automacoes', label: 'Automações', icon: Zap },
