@@ -32,6 +32,21 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
     }
     const instanceName = body.instance_name?.trim() || body.name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + crypto.randomUUID().slice(0, 8);
     const id = `inst_${crypto.randomUUID().slice(0, 16)}`;
+    const evolutionUrl = body.evolution_api_url || process.env.EVOLUTION_API_URL;
+    const evolutionKey = body.evolution_api_key || process.env.EVOLUTION_API_KEY;
+    if (!evolutionUrl || !evolutionKey) {
+      return json(res, 502, { error: 'Evolution API não configurada' });
+    }
+
+    const remote = await fetch(`${evolutionUrl.replace(/\/+$/, '')}/instance/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+      body: JSON.stringify({ instanceName, integration: 'WHATSAPP-BAILEYS', qrcode: true }),
+    });
+    if (!remote.ok) {
+      const detail = await remote.text();
+      return json(res, 502, { error: `Evolution API ${remote.status}`, detail });
+    }
     await qe(`
       INSERT INTO whatsapp_instances (id, name, sender_name, instance_name, description, phone,
         evolution_api_url, evolution_api_key, is_default, status)
@@ -39,8 +54,7 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
     `, [
       id, body.name.trim(), body.sender_name?.trim() || body.name.trim(), instanceName,
       body.description || null, body.phone || null,
-      body.evolution_api_url || process.env.EVOLUTION_API_URL || null,
-      body.evolution_api_key || process.env.EVOLUTION_API_KEY || null,
+      evolutionUrl, evolutionKey,
       body.is_default ? 1 : 0,
     ]);
     return json(res, 201, { id, instance_name: instanceName });
@@ -110,33 +124,41 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
       // Se QR foi colado, conecta diretamente
       if (body?.qr) {
         const resp = await fetch(`${baseUrl}/instance/connect/${inst.instance_name}`, {
-          method: 'POST',
+          method: 'GET',
           headers: { 'Content-Type': 'application/json', apikey: apiKey },
-          body: JSON.stringify({ qrcode: body.qr }),
         }).then(r => r.json()).catch(() => ({}));
         await qe(`UPDATE whatsapp_instances SET status = 'connecting', updated_at = now() WHERE id = $1`, [instId]);
         return json(res, 200, { ok: true, status: 'connecting', message: 'QR Code aplicado. Aguarde conexão.' });
       }
 
       // Gera novo QR via Evolution API
-      const { Evolution } = await import('../services/evolution.js');
-      const state = await Evolution.getConnectionState(inst.instance_name);
+      const stateResponse: any = await fetch(`${baseUrl}/instance/connectionState/${inst.instance_name}`, {
+        headers: { apikey: apiKey },
+      }).then(r => r.json()).catch(() => ({}));
+      const state = {
+        state: stateResponse?.instance?.state ?? stateResponse?.state ?? 'unknown',
+        instance: inst.instance_name,
+      };
       if (state.state === 'open') {
         await qe(`UPDATE whatsapp_instances SET status = 'connected', connected_at = now(), updated_at = now() WHERE id = $1`, [instId]);
         return json(res, 200, { status: 'connected', state });
       }
       const resp = await fetch(`${baseUrl}/instance/connect/${inst.instance_name}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: apiKey },
-        body: JSON.stringify({ webhookUrl: inst.webhook_url || '' }),
+        method: 'GET',
+        headers: { apikey: apiKey },
       }).then(r => r.json()) as any;
-      const qr = resp?.qrcode?.[0] || resp?.base64 || null;
+      const rawQr = resp?.qrcode ?? resp?.qr ?? resp?.base64 ?? null;
+      const qr = Array.isArray(rawQr)
+        ? rawQr[0]
+        : typeof rawQr === 'object'
+          ? rawQr?.base64 ?? rawQr?.qr ?? rawQr?.code ?? null
+          : rawQr;
       const expires = qr ? new Date(Date.now() + 60000).toISOString() : null;
       if (qr) {
         await qe(`UPDATE whatsapp_instances SET qr_code_base64 = $1, qr_expires_at = $2, status = 'connecting', updated_at = now() WHERE id = $3`,
           [qr, expires, instId]);
       }
-      return json(res, 200, { qr, pairingCode: resp?.pairingCode || null, status: 'connecting' });
+      return json(res, 200, { qr, pairingCode: resp?.pairingCode || resp?.code || null, status: qr ? 'connecting' : 'waiting', state });
     } finally {
       process.env.EVOLUTION_API_URL = origUrl;
       process.env.EVOLUTION_API_KEY = origKey;
@@ -163,7 +185,7 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
     try {
       const { Evolution } = await import('../services/evolution.js');
       const apiBase = process.env.API_BASE_URL || `https://lucid-contentment-production-17bc.up.railway.app`;
-      const webhookUrl = `${apiBase}/webhook/evolution/${instId}`;
+      const webhookUrl = `${apiBase}/webhook/evolution`;
       await Evolution.setWebhook({ url: webhookUrl, events: ['messages.upsert', 'connection.update'], instanceName: inst.instance_name });
       await qe(`UPDATE whatsapp_instances SET webhook_url = $1, updated_at = now() WHERE id = $2`, [webhookUrl, instId]);
       return json(res, 200, { ok: true, webhookUrl });
