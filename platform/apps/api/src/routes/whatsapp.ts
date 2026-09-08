@@ -144,8 +144,12 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
       const instanceName = (conv as any).instance_id
         ? (await q1(`SELECT instance_name FROM whatsapp_instances WHERE id = $1`, [(conv as any).instance_id]) as any)?.instance_name
         : undefined;
-      await Evolution.sendText({ number: formatNumber(contact.phone), text, instanceName });
-      await MessageRepository.insert({ conversation_id: conv.id, direction: 'outgoing', type: 'text', content: text, status: 'sent', sent_by_user_id: user.id });
+      try {
+        await Evolution.sendText({ number: formatNumber(contact.phone), text, instanceName });
+        await MessageRepository.insert({ conversation_id: conv.id, direction: 'outgoing', type: 'text', content: text, status: 'sent', sent_by_user_id: user.id });
+      } catch (sendErr: any) {
+        logger.warn('close: failed to send closing message', { error: String(sendErr?.message || sendErr) });
+      }
     }
     await ConversationRepository.update(conv.id, { status: 'active', automation_status: 'idle', current_node: null, closed_at: new Date().toISOString(), closed_by: user.id, last_message_at: new Date().toISOString() } as any);
     if (conv.lead_id) await qe(`UPDATE leads SET last_activity_at = now(), updated_at = now() WHERE id = $1`, [conv.lead_id]);
