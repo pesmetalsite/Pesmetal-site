@@ -27,10 +27,22 @@ export default function ConexoesPage() {
     setLoading(true)
     try {
       const r = await api('/instances', {}, getToken()!) as any
-      setInstances(r.instances || [])
+      const rows = r.instances || []
+      const refreshed = await Promise.all(rows.map(async (instance: Instance) => {
+        if (instance.status === 'connected') return instance
+        try {
+          const current = await api(`/instances/${instance.id}/status`, {}, getToken()!) as any
+          return current.instance || instance
+        } catch { return instance }
+      }))
+      setInstances(refreshed)
     } finally { setLoading(false) }
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    const timer = setInterval(load, 5000)
+    return () => clearInterval(timer)
+  }, [])
 
   const showSaved = (msg: string) => { setSaved(msg); setTimeout(() => setSaved(''), 2500) }
 

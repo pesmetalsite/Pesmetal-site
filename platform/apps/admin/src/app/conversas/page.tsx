@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import AppShell from '@/components/AppShell'
 import { api, getToken } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
+import { RefreshCw } from 'lucide-react'
 
 export default function ConversasPage() {
   const [convs, setConvs] = useState<any[]>([])
@@ -12,6 +13,8 @@ export default function ConversasPage() {
   const [messages, setMessages] = useState<any[]>([])
   const [reply, setReply] = useState('')
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -67,11 +70,33 @@ export default function ConversasPage() {
     load()
   }
 
+  const syncHistory = async () => {
+    setSyncing(true)
+    setSyncMessage('')
+    try {
+      const result = await api('/whatsapp/conversations/sync', { method: 'POST', body: JSON.stringify({}) }, getToken()!) as any
+      setSyncMessage(`${result.messages_imported || 0} mensagens importadas`)
+      await load()
+    } catch (e: any) {
+      setSyncMessage(e.message || 'Falha ao sincronizar')
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncMessage(''), 5000)
+    }
+  }
+
   return (
     <AppShell title="Conversas WhatsApp">
       {loading ? <div className="loading">Carregando…</div> : (
         <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr 280px', gap: 16, height: 'calc(100vh - 120px)' }}>
           <div className="card" style={{ padding: 0, overflowY: 'auto' }}>
+            <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button className="btn btn-ghost btn-sm" onClick={syncHistory} disabled={syncing} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
+                {syncing ? 'Sincronizando…' : 'Sincronizar mensagens'}
+              </button>
+              {syncMessage && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{syncMessage}</span>}
+            </div>
             {/* Filtro por Etapa */}
             <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
               <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 8, fontWeight: 500 }}>FILTRAR POR ETAPA</div>

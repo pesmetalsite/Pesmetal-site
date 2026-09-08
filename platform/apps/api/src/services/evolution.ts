@@ -96,8 +96,13 @@ export const Evolution = {
     });
   },
 
-  async findMessages({ number, limit = 20 }: { number: string; limit?: number }) {
-    return call(`/chat/findMessages/${DEFAULT_INSTANCE}`, 'POST', { where: { key: { remoteJid: number } }, limit });
+  async findChats({ instanceName }: { instanceName?: string } = {}) {
+    return call(`/chat/findChats/${resolveInstance(instanceName)}`, 'POST', {});
+  },
+
+  async findMessages({ number, limit = 10000, instanceName }: { number?: string; limit?: number; instanceName?: string } = {}) {
+    const body = number ? { where: { key: { remoteJid: number } }, limit } : { limit };
+    return call(`/chat/findMessages/${resolveInstance(instanceName)}`, 'POST', body);
   },
 };
 

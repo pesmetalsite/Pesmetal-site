@@ -62,6 +62,23 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
 
   // GET /instances/:id
   const idMatch = path.match(/^\/instances\/([^\/]+)$/);
+
+  // GET /instances/:id/status — sincroniza o status local com a Evolution
+  const statusMatch = path.match(/^\/instances\/([^\/]+)\/status$/);
+  if (statusMatch && method === 'GET') {
+    const inst = (await q1(`SELECT * FROM whatsapp_instances WHERE id = $1 AND active = 1`, [statusMatch[1]])) as any;
+    if (!inst) throw ApiError.notFound('Instancia');
+    const baseUrl = inst.evolution_api_url || process.env.EVOLUTION_API_URL;
+    const apiKey = inst.evolution_api_key || process.env.EVOLUTION_API_KEY;
+    if (!baseUrl || !apiKey) return json(res, 502, { error: 'Evolution API não configurada' });
+    const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/instance/connectionState/${inst.instance_name}`, { headers: { apikey: apiKey } });
+    const data: any = await response.json().catch(() => ({}));
+    const state = data?.instance?.state || data?.state || 'unknown';
+    const status = state === 'open' ? 'connected' : ['connecting', 'qrcode', 'pairing'].includes(state) ? 'connecting' : state === 'close' || state === 'closed' ? 'disconnected' : 'error';
+    await qe(`UPDATE whatsapp_instances SET status = $1, connected_at = CASE WHEN $1 = 'connected' THEN COALESCE(connected_at, now()) ELSE connected_at END, error = CASE WHEN $1 = 'error' THEN $2 ELSE NULL END, updated_at = now() WHERE id = $3`, [status, state, inst.id]);
+    return json(res, 200, { instance: { ...inst, status, error: status === 'error' ? state : null }, state });
+  }
+
   if (idMatch && method === 'GET') {
     const row = await q1(`
       SELECT id, name, sender_name, description, phone, instance_name, webhook_url,

@@ -97,10 +97,11 @@ export const MessageRepository = {
     const id = data.id || `msg_${crypto.randomUUID().slice(0, 16)}`;
     await qe(`INSERT INTO whatsapp_messages
                 (id, external_id, conversation_id, direction, type, content, media_url, media_mime, status, sent_by_user_id, error, metadata)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, COALESCE($13, now()))`,
       [id, data.external_id ?? null, data.conversation_id, data.direction, data.type,
         data.content ?? null, data.media_url ?? null, data.media_mime ?? null,
-        data.status ?? 'pending', data.sent_by_user_id ?? null, data.error ?? null, data.metadata ?? null]);
+        data.status ?? 'pending', data.sent_by_user_id ?? null, data.error ?? null, data.metadata ?? null,
+        data.created_at ?? null]);
     return id;
   },
   async listByConversation(conversationId: string): Promise<MessageRow[]> {
