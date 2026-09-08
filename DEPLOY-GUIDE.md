@@ -35,7 +35,7 @@ Sistema completo de captação de leads, CRM e automação WhatsApp para Pes Met
 
 | Sistema | Usuário | Senha |
 |---------|---------|-------|
-| Admin | `admin@pesmetal.local` | `pesmetal123` |
+| Admin | `admin@pesmetal.local` | `<SENHA_NAO_VERSIONAR>` |
 | Evolution API | (configurado via env) | `<definido no Railway>` |
 
 ⚠️ **IMPORTANTE:** Troque a senha padrão antes de usar em produção.
@@ -106,7 +106,7 @@ curl https://lucid-contentment-production-17bc.up.railway.app/health
 # Login
 curl -X POST https://lucid-contentment-production-17bc.up.railway.app/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@pesmetal.local","password":"pesmetal123"}'
+  -d '{"email":"admin@pesmetal.local","password":"<SENHA_NAO_VERSIONAR>"}'
 
 # Status WhatsApp
 curl https://lucid-contentment-production-17bc.up.railway.app/whatsapp/status \

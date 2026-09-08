@@ -168,6 +168,19 @@ export default function ConversasPage() {
     return () => { alive = false }
   }, [filter, search])
 
+  // deep-link fora da 1ª página: busca a conversa real por id
+  useEffect(() => {
+    if (!active?._fromLink || !active?.id) return
+    api(`/whatsapp/conversations/${active.id}`, {}, getToken()!)
+      .then((r) => {
+        const conv = r.conversation
+        if (!conv) return
+        setConvs((prev: any[]) => prev.some((c: any) => c.id === conv.id) ? prev : [conv, ...prev])
+        setActive((prev: any) => prev?._fromLink && prev.id === conv.id ? { ...conv } : prev)
+      })
+      .catch(() => { /* noop */ })
+  }, [active?._fromLink, active?.id])
+
   // paginação incremental da lista (sentinel)
   useEffect(() => {
     const el = sentinelRef.current
@@ -213,6 +226,7 @@ export default function ConversasPage() {
     const mergeLatest = async () => {
       const r = await api(`/whatsapp/conversations/${convId}/messages?limit=${PAGE}&offset=0&oldest_first=0`, {}, getToken()!)
       if (!alive) return
+      setOlderBase(Math.max(0, (r.total || 0) - PAGE))
       const asc = (r.messages || []).slice().reverse()
       const map = new Map(msgsRef.current.map((m: any) => [m.id, m]))
       asc.forEach((m: any) => map.set(m.id, m))
@@ -403,7 +417,7 @@ export default function ConversasPage() {
                       <span className="conv-item-time">{hm(c.last_message_at)}</span>
                     </div>
                     <div className="conv-item-sub">
-                      {c.contact_phone || c.contact_company || 'WhatsApp'}
+                      {c.last_message ? (c.last_message.length > 80 ? c.last_message.slice(0, 80) + '…' : c.last_message) : (c.contact_phone || c.contact_company || 'Sem mensagens')}
                     </div>
                     <div className="conv-item-row2">
                       <span className="conv-item-ctx">

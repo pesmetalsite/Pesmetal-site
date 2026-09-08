@@ -131,7 +131,7 @@ Acessos:
 
 | Sistema | Usuário | Senha |
 |---------|---------|-------|
-| Admin | `admin@pesmetal.local` | `pesmetal123` |
+| Admin | `admin@pesmetal.local` | `<SENHA_NAO_VERSIONAR>` |
 
 ⚠️ **IMPORTANTE:** Troque a senha padrão antes de usar em produção!
 

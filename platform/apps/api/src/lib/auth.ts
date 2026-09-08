@@ -27,7 +27,7 @@ export async function ensureAdminUser() {
   const exists = (await q1('SELECT COUNT(*)::int as c FROM users')) as { c: number };
   if (exists?.c === 0) {
     const email = process.env.ADMIN_EMAIL || 'admin@pesmetal.local';
-    const password = process.env.ADMIN_PASSWORD || 'pesmetal123';
+    const password = process.env.ADMIN_PASSWORD || crypto.randomUUID().slice(0, 16);
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     await qe(`
       INSERT INTO users (id, email, name, password_hash, role)

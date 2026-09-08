@@ -92,7 +92,8 @@ export const ConversationRepository = {
     const offset = Math.max(filter.offset ?? 0, 0);
     const rows = await q(`
       SELECT wc.*, c.name as contact_name, c.phone as contact_phone, c.company as contact_company,
-             l.name as lead_name, l.stage_id, ps.name as stage_name, ps.color as stage_color
+             l.name as lead_name, l.stage_id, ps.name as stage_name, ps.color as stage_color,
+             (SELECT content FROM whatsapp_messages WHERE conversation_id = wc.id ORDER BY created_at DESC, id DESC LIMIT 1) AS last_message
       ${base}
       ORDER BY COALESCE(wc.last_message_at, wc.created_at) DESC NULLS LAST
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}

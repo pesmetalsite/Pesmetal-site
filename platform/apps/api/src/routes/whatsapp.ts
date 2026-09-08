@@ -69,6 +69,23 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
     return json(res, 202, { ok: true, status: 'started', message: 'Sincronização iniciada em segundo plano. As conversas aparecerão em instantes.' });
   }
 
+  // GET /whatsapp/conversations/:id
+  const convMatch = path.match(/^\/whatsapp\/conversations\/([^\/]+)$/);
+  if (convMatch && method === 'GET') {
+    const row = await q1(`
+      SELECT wc.*, c.name as contact_name, c.phone as contact_phone, c.company as contact_company,
+             l.name as lead_name, l.stage_id, ps.name as stage_name, ps.color as stage_color,
+             (SELECT content FROM whatsapp_messages WHERE conversation_id = wc.id ORDER BY created_at DESC, id DESC LIMIT 1) AS last_message
+      FROM whatsapp_conversations wc
+      JOIN contacts c ON c.id = wc.contact_id
+      LEFT JOIN leads l ON l.id = wc.lead_id
+      LEFT JOIN pipeline_stages ps ON ps.id = l.stage_id
+      WHERE wc.id = $1
+    `, [convMatch[1]]);
+    if (!row) throw ApiError.notFound('Conversa');
+    return json(res, 200, { conversation: row });
+  }
+
   // /whatsapp/conversations/:id/messages
   const msgsMatch = path.match(/^\/whatsapp\/conversations\/([^\/]+)\/messages$/);
   if (msgsMatch && method === 'GET') {
