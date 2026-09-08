@@ -14,6 +14,8 @@ export interface AutomationRow {
   initial_message: string | null;
   options: string | null;
   invalid_message: string | null;
+  instance_ids: string | null;
+  closing_message: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -30,15 +32,15 @@ export const AutomationRepository = {
   },
   async insert(data: Partial<AutomationRow> & Pick<AutomationRow, 'name' | 'trigger'>): Promise<string> {
     const id = data.id || `auto_${crypto.randomUUID().slice(0, 16)}`;
-    await qe(`INSERT INTO automations (id, name, description, trigger, keyword, status, graph, initial_message, options, invalid_message)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    await qe(`INSERT INTO automations (id, name, description, trigger, keyword, status, graph, initial_message, options, invalid_message, instance_ids, closing_message)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [id, data.name, data.description ?? null, data.trigger, data.keyword ?? null,
         data.status ?? 'draft', data.graph ?? null, data.initial_message ?? null,
-        data.options ?? null, data.invalid_message ?? null]);
+        data.options ?? null, data.invalid_message ?? null, (data as any).instance_ids ?? '[]', (data as any).closing_message ?? null]);
     return id;
   },
   async update(id: string, fields: Partial<AutomationRow>): Promise<void> {
-    const allowed: (keyof AutomationRow)[] = ['name', 'description', 'trigger', 'keyword', 'status', 'graph', 'initial_message', 'options', 'invalid_message'];
+    const allowed: (keyof AutomationRow)[] = ['name', 'description', 'trigger', 'keyword', 'status', 'graph', 'initial_message', 'options', 'invalid_message', 'instance_ids', 'closing_message'];
     const sets: string[] = [];
     const params: any[] = [];
     for (const k of allowed) {

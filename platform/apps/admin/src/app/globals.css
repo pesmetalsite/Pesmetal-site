@@ -338,6 +338,9 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
 }
 .conv-search::placeholder { color: var(--text-muted); }
 .conv-sync { flex-shrink: 0; padding: 7px 10px; border-radius: 20px; }
+.conv-new-btn { flex-shrink: 0; padding: 6px 10px; border-radius: 20px; }
+.btn-icon { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 2px; display: inline-flex; vertical-align: middle; }
+.btn-icon:hover { color: var(--brand); }
 .conv-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .conv-chip {
   padding: 4px 12px; border-radius: 100px; cursor: pointer;

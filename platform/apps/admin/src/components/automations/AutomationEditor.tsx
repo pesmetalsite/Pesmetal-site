@@ -6,7 +6,7 @@ import { Select } from '@/components/ui/Select'
 import { api, getToken } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { createBlankOption, parseOptions, serializeOptions } from './options'
-import type { AutomationOption, AutomationSummary, Stage } from './types'
+import type { AutomationOption, AutomationSummary, Stage, WhatsAppInstance } from './types'
 
 interface AutomationEditorProps {
   automation: AutomationSummary | null
@@ -21,6 +21,9 @@ export function AutomationEditor({ automation, stages, onClose, onSaved }: Autom
   const [status, setStatus] = useState<'active' | 'inactive'>('active')
   const [initialMessage, setInitialMessage] = useState('')
   const [invalidMessage, setInvalidMessage] = useState('')
+  const [closingMessage, setClosingMessage] = useState('')
+  const [instances, setInstances] = useState<WhatsAppInstance[]>([])
+  const [instanceIds, setInstanceIds] = useState<string[]>([])
   const [options, setOptions] = useState<AutomationOption[]>(() => [createBlankOption('opt-1')])
   const [loading, setLoading] = useState(!!automation)
   const [saving, setSaving] = useState(false)
@@ -28,6 +31,10 @@ export function AutomationEditor({ automation, stages, onClose, onSaved }: Autom
   const [focusId, setFocusId] = useState<string | null>(null)
 
   const nameRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  useEffect(() => {
+    api('/instances', {}, getToken()!).then((r) => setInstances((r.instances || []).filter((i: WhatsAppInstance) => i.status === 'connected'))).catch(() => setInstances([]))
+  }, [])
 
   useEffect(() => {
     if (!automation) return
@@ -39,6 +46,8 @@ export function AutomationEditor({ automation, stages, onClose, onSaved }: Autom
         setStatus(d.status === 'active' ? 'active' : 'inactive')
         setInitialMessage(d.initial_message ?? '')
         setInvalidMessage(d.invalid_message ?? '')
+        setClosingMessage(d.closing_message ?? '')
+        try { setInstanceIds(JSON.parse(d.instance_ids || '[]')) } catch { setInstanceIds([]) }
         const parsed = parseOptions(d.options)
         setOptions(parsed.length ? parsed : [createBlankOption('opt-1')])
       })
@@ -98,6 +107,8 @@ export function AutomationEditor({ automation, stages, onClose, onSaved }: Autom
     initial_message: initialMessage,
     options: serializeOptions(options),
     invalid_message: invalidMessage,
+    closing_message: closingMessage,
+    instance_ids: instanceIds,
   })
 
   const save = async (asCopy: boolean) => {
@@ -193,6 +204,30 @@ export function AutomationEditor({ automation, stages, onClose, onSaved }: Autom
               value={invalidMessage}
               onChange={(e) => setInvalidMessage(e.target.value)}
               placeholder="Quando o contato enviar algo que não é uma das opções…"
+              rows={2}
+            />
+
+            <div className="rounded-lg border border-border bg-bg-2/40 p-4">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-text-dim mb-2">WhatsApps desta automação</div>
+              <p className="text-xs text-text-muted mb-3">Sem seleção = todos os WhatsApps conectados.</p>
+              {instances.length === 0 ? <p className="text-sm text-text-muted">Nenhuma conexão WhatsApp ativa.</p> : (
+                <div className="grid gap-2">
+                  {instances.map((instance) => {
+                    const checked = instanceIds.includes(instance.instance_name)
+                    return <label key={instance.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" checked={checked} onChange={(e) => setInstanceIds((prev) => e.target.checked ? [...prev, instance.instance_name] : prev.filter((id) => id !== instance.instance_name))} />
+                      <span>{instance.name}</span>
+                    </label>
+                  })}
+                </div>
+              )}
+            </div>
+
+            <Textarea
+              label="Mensagem ao finalizar atendimento"
+              value={closingMessage}
+              onChange={(e) => setClosingMessage(e.target.value)}
+              placeholder="Obrigado pelo contato! Se precisar de mais alguma coisa, é só nos chamar novamente."
               rows={2}
             />
 

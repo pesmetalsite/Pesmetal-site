@@ -409,10 +409,21 @@ async function handleNumericInput(conv: any, automation: any, message: string, i
 }
 
 // === Engine público ===
+function automationAllowsInstance(automation: any, instanceName?: string): boolean {
+  if (!instanceName) return true;
+  try {
+    const ids = JSON.parse(automation.instance_ids || '[]');
+    return !Array.isArray(ids) || ids.length === 0 || ids.includes(instanceName);
+  } catch {
+    return true;
+  }
+}
+
 export async function startAutomation(conversationId: string, automationId?: string, instanceName?: string): Promise<boolean> {
-  const automation = automationId
-    ? await AutomationRepository.findById(automationId)
-    : (await AutomationRepository.listActive())[0];
+  const candidates = automationId
+    ? [await AutomationRepository.findById(automationId)]
+    : await AutomationRepository.listActive();
+  const automation = candidates.find((item) => item && automationAllowsInstance(item, instanceName));
   if (!automation) {
     logger.warn('no active automation available', { conversationId });
     return false;
@@ -461,6 +472,7 @@ export async function processIncomingMessage(conversationId: string, message: st
   const conv = await ConversationRepository.findById(conversationId);
   if (!conv) return;
   if (conv.automation_status === 'paused' || conv.status === 'human') return;
+  if (conv.automation_status === 'completed' || conv.status === 'closed') return;
 
   const automation = conv.automation_id ? await AutomationRepository.findById(conv.automation_id) : null;
   if (!automation) {

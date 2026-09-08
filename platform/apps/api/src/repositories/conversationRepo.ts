@@ -13,8 +13,13 @@ export interface ConversationRow {
   automation_status: 'idle' | 'running' | 'waiting_input' | 'paused' | 'completed' | 'transferred';
   current_node: string | null;
   context: string | null;
+  instance_id: string | null;
   last_message_at: string | null;
   unread_count: number;
+  human_started_at: string | null;
+  human_started_by: string | null;
+  closed_at: string | null;
+  closed_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -36,7 +41,8 @@ export interface MessageRow {
 }
 
 export const ConversationRepository = {
-  async findByContactId(contactId: string): Promise<ConversationRow | undefined> {
+  async findByContactId(contactId: string, instanceId?: string | null): Promise<ConversationRow | undefined> {
+    if (instanceId) return (await q1(`SELECT * FROM whatsapp_conversations WHERE contact_id = $1 AND instance_id = $2 ORDER BY created_at DESC LIMIT 1`, [contactId, instanceId])) as ConversationRow | undefined;
     return (await q1(`SELECT * FROM whatsapp_conversations WHERE contact_id = $1 ORDER BY created_at DESC LIMIT 1`, [contactId])) as ConversationRow | undefined;
   },
   async findById(id: string): Promise<ConversationRow | undefined> {
@@ -45,16 +51,17 @@ export const ConversationRepository = {
   async insert(data: Partial<ConversationRow> & Pick<ConversationRow, 'contact_id'>): Promise<string> {
     const id = data.id || `conv_${crypto.randomUUID().slice(0, 16)}`;
     await qe(`INSERT INTO whatsapp_conversations
-                (id, contact_id, lead_id, assigned_user_id, automation_id, status, automation_status, current_node, context, last_message_at, unread_count)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), 0)`,
+                (id, contact_id, lead_id, assigned_user_id, automation_id, status, automation_status, current_node, context, instance_id, last_message_at, unread_count)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(), 0)`,
       [id, data.contact_id, data.lead_id ?? null, data.assigned_user_id ?? null, data.automation_id ?? null,
-        data.status ?? 'active', data.automation_status ?? 'idle', data.current_node ?? null, data.context ?? null]);
+        data.status ?? 'active', data.automation_status ?? 'idle', data.current_node ?? null, data.context ?? null, (data as any).instance_id ?? null]);
     return id;
   },
   async update(id: string, fields: Partial<ConversationRow>): Promise<void> {
     const allowed: (keyof ConversationRow)[] = [
       'lead_id', 'assigned_user_id', 'automation_id', 'status',
-      'automation_status', 'current_node', 'context', 'last_message_at', 'unread_count',
+      'automation_status', 'current_node', 'context', 'instance_id', 'last_message_at', 'unread_count',
+      'human_started_at', 'human_started_by', 'closed_at', 'closed_by',
     ];
     const sets: string[] = [];
     const params: any[] = [];
@@ -91,7 +98,7 @@ export const ConversationRepository = {
     const limit = Math.min(Math.max(filter.limit ?? 50, 1), 200);
     const offset = Math.max(filter.offset ?? 0, 0);
     const rows = await q(`
-      SELECT wc.*, c.name as contact_name, c.phone as contact_phone, c.company as contact_company,
+      SELECT wc.*, c.name as contact_name, c.custom_name, c.phone as contact_phone, c.company as contact_company,
              l.name as lead_name, l.stage_id, ps.name as stage_name, ps.color as stage_color,
              (SELECT content FROM whatsapp_messages WHERE conversation_id = wc.id ORDER BY created_at DESC, id DESC LIMIT 1) AS last_message
       ${base}

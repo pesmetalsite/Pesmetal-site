@@ -70,7 +70,15 @@ export async function migrate(): Promise<void> {
     `ALTER TABLE automations ADD COLUMN IF NOT EXISTS initial_message text`,
     `ALTER TABLE automations ADD COLUMN IF NOT EXISTS options text`,
     `ALTER TABLE automations ADD COLUMN IF NOT EXISTS invalid_message text`,
+    `ALTER TABLE automations ADD COLUMN IF NOT EXISTS instance_ids text NOT NULL DEFAULT '[]'`,
+    `ALTER TABLE automations ADD COLUMN IF NOT EXISTS closing_message text`,
     `ALTER TABLE leads ADD COLUMN IF NOT EXISTS last_activity_at timestamptz`,
+    `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS custom_name text`,
+    `ALTER TABLE whatsapp_conversations ADD COLUMN IF NOT EXISTS instance_id text`,
+    `ALTER TABLE whatsapp_conversations ADD COLUMN IF NOT EXISTS human_started_at timestamptz`,
+    `ALTER TABLE whatsapp_conversations ADD COLUMN IF NOT EXISTS human_started_by text`,
+    `ALTER TABLE whatsapp_conversations ADD COLUMN IF NOT EXISTS closed_at timestamptz`,
+    `ALTER TABLE whatsapp_conversations ADD COLUMN IF NOT EXISTS closed_by text`,
   ];
   for (const sql of alters) {
     try {
@@ -208,6 +216,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     tags text,
     notes text,
     avatar text,
+    custom_name text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -292,7 +301,12 @@ CREATE TABLE IF NOT EXISTS whatsapp_conversations (
     automation_status text DEFAULT 'idle',
     current_node text,
     context text,
+    instance_id text,
     last_message_at timestamptz,
+    human_started_at timestamptz,
+    human_started_by text,
+    closed_at timestamptz,
+    closed_by text,
     unread_count integer DEFAULT 0,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
@@ -325,6 +339,8 @@ CREATE TABLE IF NOT EXISTS automations (
     initial_message text,
     options text,
     invalid_message text,
+    instance_ids text NOT NULL DEFAULT '[]',
+    closing_message text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );

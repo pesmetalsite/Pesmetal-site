@@ -12,6 +12,15 @@ export interface AutomationDetail extends AutomationSummary {
   invalid_message: string | null
   options: string | null
   graph: string | null
+  instance_ids?: string | null
+  closing_message?: string | null
+}
+
+export interface WhatsAppInstance {
+  id: string
+  name: string
+  instance_name: string
+  status: string
 }
 
 export interface AutomationOption {

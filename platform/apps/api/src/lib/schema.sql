@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     tags text,
     notes text,
     avatar text,
+    custom_name text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -145,7 +146,12 @@ CREATE TABLE IF NOT EXISTS whatsapp_conversations (
     automation_status text DEFAULT 'idle',
     current_node text,
     context text,
+    instance_id text,
     last_message_at timestamptz,
+    human_started_at timestamptz,
+    human_started_by text,
+    closed_at timestamptz,
+    closed_by text,
     unread_count integer DEFAULT 0,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
@@ -178,6 +184,8 @@ CREATE TABLE IF NOT EXISTS automations (
     initial_message text,
     options text,
     invalid_message text,
+    instance_ids text NOT NULL DEFAULT '[]',
+    closing_message text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );

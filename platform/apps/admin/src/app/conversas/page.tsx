@@ -2,9 +2,12 @@
 import { useEffect, useRef, useState } from 'react'
 import AppShell from '@/components/AppShell'
 import { api, getToken, getUser } from '@/lib/api'
-import { RefreshCw, Search, Send } from 'lucide-react'
+import { MessageSquarePlus, Pencil, RefreshCw, Search, Send } from 'lucide-react'
 
 const PAGE = 50
+
+const displayName = (conversation: any) =>
+  conversation?.custom_name || conversation?.contact_name || conversation?.contact_phone || 'Conversa'
 
 const FILTERS = [
   { id: 'all', label: 'Todas' },
@@ -74,6 +77,12 @@ export default function ConversasPage() {
   // --- utilidades ---------------------------------------------------------
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
+  const [showNewConv, setShowNewConv] = useState(false)
+  const [newConvForm, setNewConvForm] = useState({ phone: '', name: '' })
+  const [newConvError, setNewConvError] = useState('')
+  const [creatingConv, setCreatingConv] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [editNameVal, setEditNameVal] = useState('')
 
   const chatRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -346,6 +355,40 @@ export default function ConversasPage() {
     }
   }
 
+  async function finalizar() {
+    if (!active?.id) return
+    if (!confirm('Finalizar atendimento? Uma mensagem de encerramento será enviada.')) return
+    try {
+      await api(`/whatsapp/conversations/${active.id}/close`, { method: 'POST', body: JSON.stringify({}) }, getToken()!)
+      const patch = { status: 'active', automation_status: 'idle' }
+      setConvs((prev: any[]) => prev.map((c: any) => c.id === active.id ? { ...c, ...patch } : c))
+      setActive((a: any) => a ? { ...a, ...patch } : a)
+    } catch (e: any) { alert(e.message) }
+  }
+
+  async function createNewConv() {
+    const phone = newConvForm.phone.replace(/\D/g, '')
+    if (phone.length < 8) { setNewConvError('Número inválido'); return }
+    setCreatingConv(true); setNewConvError('')
+    try {
+      const r = await api('/whatsapp/conversations', { method: 'POST', body: JSON.stringify({ phone, name: newConvForm.name || undefined }) }, getToken()!) as any
+      setShowNewConv(false); setNewConvForm({ phone: '', name: '' })
+      loadedOnceRef.current = false; setFilter('all'); setSearchInput(''); setSearch('')
+      setTimeout(() => { if (r?.conversation?.id) { setActive(r.conversation); openIdRef.current = r.conversation.id } }, 500)
+    } catch (e: any) { setNewConvError(e.message) }
+    finally { setCreatingConv(false) }
+  }
+
+  async function saveCustomName() {
+    if (!active) return
+    try {
+      await api(`/whatsapp/conversations/${active.id}`, { method: 'PATCH', body: JSON.stringify({ custom_name: editNameVal || null }) }, getToken()!)
+      setActive((a: any) => ({ ...a, custom_name: editNameVal || null }))
+      setConvs((prev) => prev.map((c) => c.id === active.id ? { ...c, custom_name: editNameVal || null } : c))
+      setEditingName(false)
+    } catch (e: any) { alert(e.message) }
+  }
+
   async function syncHistory() {
     setSyncing(true)
     setSyncMsg('')
@@ -379,6 +422,9 @@ export default function ConversasPage() {
                   placeholder="Buscar nome ou telefone..."
                 />
               </div>
+              <button className="btn btn-primary btn-sm conv-new-btn" onClick={() => setShowNewConv(true)} title="Nova conversa">
+                <MessageSquarePlus size={15} />
+              </button>
               <button className="btn btn-ghost btn-sm conv-sync" onClick={syncHistory} disabled={syncing} title="Sincronizar mensagens">
                 <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
               </button>
@@ -410,10 +456,10 @@ export default function ConversasPage() {
                   className={`conv-item ${active?.id === c.id ? 'active' : ''}`}
                   onClick={() => openConversation(c)}
                 >
-                  <div className="conv-avatar">{(c.contact_name || c.contact_phone || '?').charAt(0).toUpperCase()}</div>
+                  <div className="conv-avatar">{displayName(c).charAt(0).toUpperCase()}</div>
                   <div className="conv-item-body">
                     <div className="conv-item-top">
-                      <span className="conv-item-name">{c.contact_name || c.contact_phone}</span>
+                      <span className="conv-item-name">{displayName(c)}</span>
                       <span className="conv-item-time">{hm(c.last_message_at)}</span>
                     </div>
                     <div className="conv-item-sub">
@@ -453,10 +499,15 @@ export default function ConversasPage() {
               <div className="conv-chat-head">
                 <div className="who">
                   <div className="conv-avatar conv-avatar-md">
-                    {(active.contact_name || active.contact_phone || '?').charAt(0).toUpperCase()}
+                    {displayName(active).charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <div className="conv-chat-name">{active.contact_name || active.contact_phone}</div>
+                    <div className="conv-chat-name">
+                      {displayName(active)}
+                      <button className="btn-icon" title="Editar nome" onClick={() => { setEditNameVal(active.custom_name || ''); setEditingName(true) }}>
+                        <Pencil size={13} />
+                      </button>
+                    </div>
                     <div className="conv-chat-sub">
                       {active.contact_phone ? `${active.contact_phone} · ` : ''}
                       {STATUS_LABEL[active.status] || active.status || '—'}
@@ -464,7 +515,8 @@ export default function ConversasPage() {
                     </div>
                   </div>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={takeover}>Assumir atendimento humano</button>
+                <button className="btn btn-ghost btn-sm" onClick={takeover}>Assumir humano</button>
+                {active.status === 'human' && <button className="btn btn-primary btn-sm" onClick={finalizar}>Finalizar atendimento</button>}
               </div>
 
               <div className="conv-msgs-wrap">
@@ -518,7 +570,7 @@ export default function ConversasPage() {
                 {active.status === 'human' && <span className="badge badge-success">humano</span>}
               </div>
               <div className="conv-details-scroll">
-                <Row label="Nome" value={active.contact_name} />
+                <Row label="Nome" value={active.custom_name || active.contact_name} />
                 <Row label="Telefone" value={active.contact_phone} />
                 <Row label="Empresa" value={active.contact_company} />
                 <Row label="Lead" value={active.lead_name} />
@@ -536,6 +588,44 @@ export default function ConversasPage() {
           )}
         </div>
       </div>
+
+      {/* Modal Nova Conversa */}
+      {showNewConv && (
+        <div className="modal-overlay" onClick={() => setShowNewConv(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Nova conversa</h3>
+            <div className="grid gap-3">
+              <div>
+                <label className="label">Número do WhatsApp *</label>
+                <input className="input" value={newConvForm.phone} onChange={(e) => setNewConvForm({ ...newConvForm, phone: e.target.value })} placeholder="+55 (15) 99999-9999" autoFocus />
+              </div>
+              <div>
+                <label className="label">Nome (opcional)</label>
+                <input className="input" value={newConvForm.name} onChange={(e) => setNewConvForm({ ...newConvForm, name: e.target.value })} placeholder="Nome do contato" />
+              </div>
+              {newConvError && <div style={{ fontSize: 12, color: 'var(--danger)' }}>{newConvError}</div>}
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+                <button className="btn btn-ghost" onClick={() => setShowNewConv(false)}>Cancelar</button>
+                <button className="btn btn-primary" onClick={createNewConv} disabled={creatingConv}>{creatingConv ? 'Criando…' : 'Iniciar conversa'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Nome */}
+      {editingName && (
+        <div className="modal-overlay" onClick={() => setEditingName(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Editar nome</h3>
+            <input className="input" value={editNameVal} onChange={(e) => setEditNameVal(e.target.value)} placeholder="Nome personalizado" autoFocus />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+              <button className="btn btn-ghost" onClick={() => setEditingName(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={saveCustomName}>Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   )
 }

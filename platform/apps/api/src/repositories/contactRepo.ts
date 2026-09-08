@@ -11,6 +11,7 @@ export interface ContactRow {
   email: string | null;
   company: string | null;
   avatar: string | null;
+  custom_name: string | null;
   tags: string | null;
   created_at: string;
   updated_at: string;
@@ -33,7 +34,7 @@ export const ContactRepository = {
     return id;
   },
   async update(id: string, fields: Partial<ContactRow>): Promise<void> {
-    const allowed: (keyof ContactRow)[] = ['name', 'email', 'company', 'avatar', 'tags', 'whatsapp_id'];
+    const allowed: (keyof ContactRow)[] = ['name', 'custom_name', 'email', 'company', 'avatar', 'tags', 'whatsapp_id'];
     const sets: string[] = [];
     const params: any[] = [];
     for (const k of allowed) {

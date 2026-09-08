@@ -155,6 +155,8 @@ export const CreateAutomationSchema = z.object({
   initial_message: z.string().optional(),
   options: z.any().optional(),
   invalid_message: z.string().optional(),
+  instance_ids: z.any().optional(),
+  closing_message: z.string().optional(),
 });
 
 // === Public (site) ===

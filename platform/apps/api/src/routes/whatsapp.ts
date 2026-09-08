@@ -3,7 +3,7 @@
  */
 import { json, readBody, getQuery } from '../lib/http.js';
 import { authenticate } from '../lib/auth.js';
-import { q1 } from '../lib/db.js';
+import { q, q1, qe } from '../lib/db.js';
 import { ConversationRepository, MessageRepository } from '../repositories/conversationRepo.js';
 import { ContactRepository } from '../repositories/contactRepo.js';
 import { findOrCreateContactId } from '../services/crm.js';
@@ -45,7 +45,39 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
     return json(res, 200, { ...state, configured: !!process.env.EVOLUTION_API_URL });
   }
 
-// GET /whatsapp/conversations
+  // POST /whatsapp/conversations — inicia uma conversa manual sem duplicar contato/conversa
+  if (path === '/whatsapp/conversations' && method === 'POST') {
+    const body = await readBody(req);
+    const phone = String(body?.phone || '').replace(/\D/g, '');
+    if (phone.length < 8) throw ApiError.validation('Número do WhatsApp inválido');
+    const instances = (await q(`SELECT id, instance_name, name, status FROM whatsapp_instances WHERE active = 1 AND status = 'connected' ORDER BY is_default DESC, created_at ASC`)) as any[];
+    const requested = body?.instance_name ? instances.find((i) => i.instance_name === body.instance_name) : null;
+    const instance = requested || (instances.length === 1 ? instances[0] : null);
+    if (!instance) throw ApiError.validation(instances.length ? 'Selecione o WhatsApp de envio' : 'Nenhum WhatsApp conectado');
+
+    let contact = await ContactRepository.findByPhone(phone);
+    if (!contact) {
+      const contactId = await ContactRepository.insert({ phone, name: body?.name?.trim() || phone, custom_name: body?.custom_name?.trim() || body?.name?.trim() || null });
+      contact = await ContactRepository.findById(contactId);
+    } else if (body?.custom_name !== undefined || body?.name !== undefined) {
+      await ContactRepository.update(contact.id, { custom_name: body.custom_name?.trim() || null, name: body.name?.trim() || contact.name });
+      contact = await ContactRepository.findById(contact.id);
+    }
+    if (!contact) throw ApiError.internal('Não foi possível criar contato');
+
+    const { createLead } = await import('../services/crm.js');
+    const lead = await createLead({ name: body?.name?.trim() || contact.custom_name || contact.name || phone, phone, source: 'manual' });
+    let conversation = await ConversationRepository.findByContactId(contact.id, instance.id);
+    if (!conversation) {
+      const id = await ConversationRepository.insert({ contact_id: contact.id, lead_id: lead.lead_id, instance_id: instance.id, status: 'active', automation_status: 'paused' });
+      conversation = (await ConversationRepository.findById(id))!;
+    } else if (!conversation.lead_id) {
+      await ConversationRepository.update(conversation.id, { lead_id: lead.lead_id });
+    }
+    return json(res, 201, { conversation: { ...conversation, contact_name: contact.custom_name || contact.name || phone, contact_phone: contact.phone, instance_name: instance.instance_name }, instance_name: instance.instance_name });
+  }
+
+  // GET /whatsapp/conversations
   if (path === '/whatsapp/conversations' && method === 'GET') {
     const q = getQuery(url);
     const { conversations, total } = await ConversationRepository.list({
@@ -73,7 +105,7 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
   const convMatch = path.match(/^\/whatsapp\/conversations\/([^\/]+)$/);
   if (convMatch && method === 'GET') {
     const row = await q1(`
-      SELECT wc.*, c.name as contact_name, c.phone as contact_phone, c.company as contact_company,
+      SELECT wc.*, c.name as contact_name, c.custom_name, c.phone as contact_phone, c.company as contact_company,
              l.name as lead_name, l.stage_id, ps.name as stage_name, ps.color as stage_color,
              (SELECT content FROM whatsapp_messages WHERE conversation_id = wc.id ORDER BY created_at DESC, id DESC LIMIT 1) AS last_message
       FROM whatsapp_conversations wc
@@ -84,6 +116,40 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
     `, [convMatch[1]]);
     if (!row) throw ApiError.notFound('Conversa');
     return json(res, 200, { conversation: row });
+  }
+
+  // PATCH /whatsapp/conversations/:id/name — nome personalizado sem destruir o original
+  if (convMatch && method === 'PATCH') {
+    const body = await readBody(req);
+    const conv = await ConversationRepository.findById(convMatch[1]);
+    if (!conv) throw ApiError.notFound('Conversa');
+    const contact = await ContactRepository.findById(conv.contact_id);
+    if (!contact) throw ApiError.notFound('Contato');
+    const customName = body?.custom_name == null ? null : String(body.custom_name).trim() || null;
+    await ContactRepository.update(contact.id, { custom_name: customName });
+    return json(res, 200, { ok: true, custom_name: customName, display_name: customName || contact.name || contact.phone });
+  }
+
+  // POST /whatsapp/conversations/:id/close — finaliza atendimento humano e arma novo ciclo
+  const closeMatch = path.match(/^\/whatsapp\/conversations\/([^\/]+)\/close$/);
+  if (closeMatch && method === 'POST') {
+    const conv = await ConversationRepository.findById(closeMatch[1]);
+    if (!conv) throw ApiError.notFound('Conversa');
+    if (conv.status === 'closed') return json(res, 200, { ok: true, already_closed: true });
+    const body = await readBody(req).catch(() => ({}));
+    const automation = conv.automation_id ? await q1(`SELECT closing_message FROM automations WHERE id = $1`, [conv.automation_id]) as any : null;
+    const text = body?.message || automation?.closing_message || 'Obrigado pelo contato! Se precisar de mais alguma coisa, é só nos chamar novamente.';
+    const contact = await ContactRepository.findById(conv.contact_id);
+    if (contact) {
+      const instanceName = (conv as any).instance_id
+        ? (await q1(`SELECT instance_name FROM whatsapp_instances WHERE id = $1`, [(conv as any).instance_id]) as any)?.instance_name
+        : undefined;
+      await Evolution.sendText({ number: formatNumber(contact.phone), text, instanceName });
+      await MessageRepository.insert({ conversation_id: conv.id, direction: 'outgoing', type: 'text', content: text, status: 'sent', sent_by_user_id: user.id });
+    }
+    await ConversationRepository.update(conv.id, { status: 'active', automation_status: 'idle', current_node: null, closed_at: new Date().toISOString(), closed_by: user.id, last_message_at: new Date().toISOString() } as any);
+    if (conv.lead_id) await qe(`UPDATE leads SET last_activity_at = now(), updated_at = now() WHERE id = $1`, [conv.lead_id]);
+    return json(res, 200, { ok: true, status: 'automation_ready' });
   }
 
   // /whatsapp/conversations/:id/messages
@@ -110,13 +176,16 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
     const number = formatNumber(contact.phone);
     const senderName = await getSenderNameForConversation(msgsMatch[1]);
     const prefixedText = senderName ? `*${senderName}*\n${body.text}` : body.text;
+    const instanceName = (conv as any).instance_id
+      ? (await q1(`SELECT instance_name FROM whatsapp_instances WHERE id = $1`, [(conv as any).instance_id]) as any)?.instance_name
+      : undefined;
     try {
-      await Evolution.sendText({ number, text: prefixedText });
+      await Evolution.sendText({ number, text: prefixedText, instanceName });
       const id = await MessageRepository.insert({
         conversation_id: msgsMatch[1], direction: 'outgoing', type: 'text',
         content: body.text, status: 'sent', sent_by_user_id: user.id,
       });
-      await ConversationRepository.update(msgsMatch[1], { last_message_at: new Date().toISOString() });
+      await ConversationRepository.update(msgsMatch[1], { last_message_at: new Date().toISOString(), status: 'human', automation_status: 'paused', human_started_at: new Date().toISOString(), human_started_by: user.id });
       return json(res, 201, { id, status: 'sent' });
     } catch (err: any) {
       return json(res, 502, { error: 'Falha ao enviar', code: 'integration_error', detail: String(err?.message || err) });

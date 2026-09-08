@@ -32,6 +32,12 @@ async function resolveInstanceName(instanceId?: string): Promise<string | undefi
   return process.env.EVOLUTION_INSTANCE || undefined;
 }
 
+async function resolveInstanceId(value?: string): Promise<string | undefined> {
+  if (!value) return undefined;
+  const inst = (await q1(`SELECT id FROM whatsapp_instances WHERE active = 1 AND (id = $1 OR instance_name = $1) LIMIT 1`, [value])) as any;
+  return inst?.id;
+}
+
 export async function webhookHandler(req: any, res: any, url: URL) {
   const path = url.pathname;
 
@@ -114,11 +120,13 @@ async function handleEvolutionEvent(event: any) {
   const mime = msg?.imageMessage?.mimetype || msg?.documentMessage?.mimetype || msg?.videoMessage?.mimetype || msg?.audioMessage?.mimetype || null;
 
   const contactId = await findOrCreateContactId(phone, { name: pushName });
-  const instanceName = await resolveInstanceName(event?._instanceId);
+  const instanceHint = event?._instanceId || event?.instance || event?.instanceName || data?.instance;
+  const instanceId = await resolveInstanceId(instanceHint);
+  const instanceName = await resolveInstanceName(instanceId || instanceHint);
 
-  let conv = await ConversationRepository.findByContactId(contactId);
+  let conv = await ConversationRepository.findByContactId(contactId, instanceId);
   if (!conv) {
-    const id = await ConversationRepository.insert({ contact_id: contactId, status: 'active', automation_status: 'idle' });
+    const id = await ConversationRepository.insert({ contact_id: contactId, instance_id: instanceId, status: 'active', automation_status: 'idle' });
     conv = (await ConversationRepository.findById(id))!;
   }
 

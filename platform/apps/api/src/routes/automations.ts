@@ -55,6 +55,7 @@ export const automationsRouter = asyncHandler(async (req, res, url) => {
     if (body.options !== undefined) {
       fields.options = typeof body.options === 'string' ? body.options : JSON.stringify(body.options);
     }
+    if (body.instance_ids !== undefined) fields.instance_ids = typeof body.instance_ids === 'string' ? body.instance_ids : JSON.stringify(body.instance_ids ?? []);
     const id = await AutomationRepository.insert(fields);
     return json(res, 201, { id });
   }
@@ -75,7 +76,7 @@ export const automationsRouter = asyncHandler(async (req, res, url) => {
     }
     if (typeof body !== 'object' || body === null) body = {};
     const fields: any = {};
-    for (const k of ['name','description','trigger','keyword','status','initial_message','invalid_message'] as const) {
+    for (const k of ['name','description','trigger','keyword','status','initial_message','invalid_message','closing_message'] as const) {
       if (Object.prototype.hasOwnProperty.call(body, k)) fields[k] = body[k];
     }
     if (body.graph) fields.graph = typeof body.graph === 'string' ? body.graph : JSON.stringify(body.graph);
@@ -84,6 +85,7 @@ export const automationsRouter = asyncHandler(async (req, res, url) => {
     } else if (Object.prototype.hasOwnProperty.call(body, 'options')) {
       fields.options = '[]';
     }
+    if (body.instance_ids !== undefined) fields.instance_ids = typeof body.instance_ids === 'string' ? body.instance_ids : JSON.stringify(body.instance_ids ?? []);
     await AutomationRepository.update(idMatch[1], fields);
     return json(res, 200, { ok: true });
   }
