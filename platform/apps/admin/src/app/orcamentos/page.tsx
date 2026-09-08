@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { api, getToken, API_URL } from '@/lib/api'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
-  Search, Plus, Pencil, FileDown, Send, Copy, Trash2, X, Save,
+  Search, Plus, Pencil, FileDown, Send, Copy, Trash2, X, Save, UserPlus, ChevronDown,
 } from 'lucide-react'
 
 interface QuoteItem {
@@ -18,6 +18,20 @@ interface QuoteItem {
   description: string
   quantity: number
   unit_price: number
+}
+
+interface Contact {
+  id: string
+  name?: string | null
+  custom_name?: string | null
+  phone?: string | null
+  email?: string | null
+  company?: string | null
+  document?: string | null
+  address_line?: string | null
+  address_city?: string | null
+  address_state?: string | null
+  address_zip?: string | null
 }
 
 interface Quote {
@@ -30,9 +44,12 @@ interface Quote {
   valid_until?: string
   created_at: string
   updated_at?: string
+  contact_id?: string
   contact_name?: string
   contact_phone?: string
-  contact_id?: string
+  contact_email?: string
+  contact_company?: string
+  contact_document?: string
   conversation_id?: string
   items?: QuoteItem[]
   notes?: string
@@ -62,6 +79,29 @@ const STATUS_LABEL: Record<string, string> = {
   deleted: 'Excluído',
 }
 
+/** Baixa o PDF via fetch autenticado → Blob → download local. Nunca abre a URL da API direto. */
+async function downloadPdf(quoteId: string, fileName?: string) {
+  const token = getToken()
+  if (!token) throw new Error('Sessão expirada. Faça login novamente.')
+  const res = await fetch(`${API_URL}/quotes/${quoteId}/pdf`, { headers: { Authorization: `Bearer ${token}` } })
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`
+    try { msg = (await res.json()).error || msg } catch { /* noop */ }
+    const err: any = new Error(msg)
+    err.code = res.status === 401 ? 'unauthorized' : undefined
+    throw err
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName || `PES-METAL-Orcamento-${quoteId}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 3000)
+}
+
 export default function OrcamentosPage() {
   const router = useRouter()
   const [queryParams, setQueryParams] = useState<URLSearchParams | null>(null)
@@ -76,10 +116,12 @@ export default function OrcamentosPage() {
   const [editing, setEditing] = useState<Quote | null>(null)
   const [saving, setSaving] = useState(false)
   const [sendingId, setSendingId] = useState<string | null>(null)
+  const [sentOkId, setSentOkId] = useState<string | null>(null)
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
   const [sendPhoneOpen, setSendPhoneOpen] = useState<string | null>(null)
   const [sendPhone, setSendPhone] = useState('')
-  const [sendMsg, setSendMsg] = useState('')
+  const [sendMsg, setSendMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   // editor form state
   const [form, setForm] = useState({
@@ -94,6 +136,18 @@ export default function OrcamentosPage() {
   const [items, setItems] = useState<QuoteItem[]>([
     { description: '', quantity: 1, unit_price: 0 },
   ])
+
+  // cliente: busca + seleção + criação
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [contactSearch, setContactSearch] = useState('')
+  const [contactPickerOpen, setContactPickerOpen] = useState(false)
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
+  const [newContactMode, setNewContactMode] = useState(false)
+  const [newContact, setNewContact] = useState({
+    name: '', phone: '', email: '', company: '', document: '',
+    address_line: '', address_city: '', address_state: '', address_zip: '',
+  })
+  const [creatingContact, setCreatingContact] = useState(false)
 
   const total = useMemo(() => {
     return items.reduce((sum, it) => sum + (it.quantity || 0) * (it.unit_price || 0), 0)
@@ -113,8 +167,16 @@ export default function OrcamentosPage() {
     finally { setLoading(false) }
   }
 
+  const searchContacts = async (q: string) => {
+    try {
+      const r = await api(`/contacts?search=${encodeURIComponent(q)}&limit=50`, {}, getToken()!)
+      setContacts(r.contacts || [])
+    } catch { setContacts([]) }
+  }
+
   useEffect(() => {
     loadQuotes()
+    searchContacts('')
     const params = new URLSearchParams(window.location.search)
     setQueryParams(params)
     if (params.get('novo') === '1') {
@@ -134,8 +196,13 @@ export default function OrcamentosPage() {
       conversation_id: params.get('conversation_id') || '',
     })
     const name = params.get('contact_name') || ''
-    setForm(f => ({ ...f, title: name ? `Orçamento — ${name}` : '' }))
+    const phone = params.get('contact_phone') || ''
+    if (name) setForm(f => ({ ...f, title: name ? `Orçamento — ${name}` : '' }))
     setItems([{ description: '', quantity: 1, unit_price: 0 }])
+    if (params.get('contact_id')) {
+      setSelectedContact({ id: params.get('contact_id')!, name, phone })
+      setNewContact(nc => ({ ...nc, name, phone }))
+    }
     setEditorOpen(true)
   }
 
@@ -151,6 +218,17 @@ export default function OrcamentosPage() {
       conversation_id: q.conversation_id || '',
     })
     setItems(q.items && q.items.length > 0 ? q.items : [{ description: '', quantity: 1, unit_price: 0 }])
+    if (q.contact_id) {
+      setSelectedContact({
+        id: q.contact_id, name: q.contact_name, phone: q.contact_phone,
+        email: q.contact_email, company: q.contact_company, document: q.contact_document,
+      })
+      setNewContact(nc => ({
+        ...nc,
+        name: q.contact_name || '', phone: q.contact_phone || '',
+        email: q.contact_email || '', company: q.contact_company || '', document: q.contact_document || '',
+      }))
+    }
     setEditorOpen(true)
   }
 
@@ -185,15 +263,18 @@ export default function OrcamentosPage() {
 
   const handleSend = async (quoteId: string, phone?: string) => {
     setSendingId(quoteId)
-    setSendMsg('')
+    setSentOkId(null)
+    setSendMsg(null)
     try {
       const body: any = {}
       if (phone) body.phone = phone
       const r = await api(`/quotes/${quoteId}/send`, { method: 'POST', body: JSON.stringify(body) }, getToken()!)
-      setSendMsg(r.message || 'Orçamento enviado com sucesso!')
+      setSentOkId(quoteId)
+      setSendMsg({ kind: 'ok', text: r.message || 'Orçamento enviado com sucesso!' })
       loadQuotes()
     } catch (e: any) {
-      setSendMsg(e.message || 'Falha ao enviar')
+      const code = e?.code || (e as any)?.message
+      setSendMsg({ kind: 'err', text: e.message || 'Falha ao enviar' })
     } finally {
       setSendingId(null)
       if (phone) setSendPhoneOpen(null)
@@ -222,6 +303,61 @@ export default function OrcamentosPage() {
     }
   }
 
+  const handlePdf = async (q: Quote) => {
+    setDownloadingId(q.id)
+    try {
+      await downloadPdf(q.id, `PES-METAL-Orcamento-${q.number || q.id}.pdf`)
+    } catch (e: any) {
+      alert(e.message || 'Não foi possível gerar o PDF')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
+  const pickContact = (c: Contact) => {
+    setSelectedContact(c)
+    setForm(f => ({ ...f, contact_id: c.id }))
+    setNewContact({
+      name: c.name || c.custom_name || '', phone: c.phone || '',
+      email: c.email || '', company: c.company || '', document: c.document || '',
+      address_line: c.address_line || '', address_city: c.address_city || '',
+      address_state: c.address_state || '', address_zip: c.address_zip || '',
+    })
+    setContactPickerOpen(false)
+    setNewContactMode(false)
+  }
+
+  const clearContact = () => {
+    setSelectedContact(null)
+    setForm(f => ({ ...f, contact_id: '' }))
+  }
+
+  const createContactAndAttach = async () => {
+    if (!newContact.name.trim() || !newContact.phone.trim()) {
+      alert('Preencha nome e telefone do novo cliente')
+      return
+    }
+    setCreatingContact(true)
+    try {
+      const r = await api('/contacts', { method: 'POST', body: JSON.stringify(newContact) }, getToken()!)
+      const created: Contact = {
+        id: r.id, name: newContact.name, phone: newContact.phone, email: newContact.email || null,
+        company: newContact.company || null, document: newContact.document || null,
+        address_line: newContact.address_line || null, address_city: newContact.address_city || null,
+        address_state: newContact.address_state || null, address_zip: newContact.address_zip || null,
+      }
+      setSelectedContact(created)
+      setForm(f => ({ ...f, contact_id: created.id }))
+      setNewContactMode(false)
+      setSendMsg({ kind: 'ok', text: r.existing ? 'Cliente já existia e foi vinculado.' : 'Cliente criado e vinculado ao orçamento.' })
+      searchContacts('')
+    } catch (e: any) {
+      alert(e.message || 'Erro ao criar cliente')
+    } finally {
+      setCreatingContact(false)
+    }
+  }
+
   const filtered = quotes.filter((q) => {
     if (statusFilter !== 'all' && q.status !== statusFilter) return false
     if (!search) return true
@@ -239,8 +375,6 @@ export default function OrcamentosPage() {
   const addItem = () => setItems(prev => [...prev, { description: '', quantity: 1, unit_price: 0 }])
   const removeItem = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx))
 
-  const pdfUrl = (id: string) => `${API_URL}/quotes/${id}/pdf`
-
   return (
     <AppShell title="Orçamentos">
       <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
@@ -255,7 +389,7 @@ export default function OrcamentosPage() {
             />
           </div>
         </div>
-        <Button variant="primary" onClick={() => { setEditing(null); setForm({ title: '', description: '', valid_until: '', status: 'draft', notes: '', contact_id: '', conversation_id: '' }); setItems([{ description: '', quantity: 1, unit_price: 0 }]); setEditorOpen(true) }}>
+        <Button variant="primary" onClick={() => { setEditing(null); setSelectedContact(null); setForm({ title: '', description: '', valid_until: '', status: 'draft', notes: '', contact_id: '', conversation_id: '' }); setItems([{ description: '', quantity: 1, unit_price: 0 }]); setEditorOpen(true) }}>
           <Plus size={15} /> Novo Orçamento
         </Button>
       </div>
@@ -320,9 +454,14 @@ export default function OrcamentosPage() {
                         <button className="p-1.5 rounded hover:bg-bg-2 text-text-dim hover:text-brand" title="Editar" onClick={() => openEditorEdit(q)}>
                           <Pencil size={14} />
                         </button>
-                        <a href={pdfUrl(q.id)} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded hover:bg-bg-2 text-text-dim hover:text-brand" title="PDF">
-                          <FileDown size={14} />
-                        </a>
+                        <button
+                          className="p-1.5 rounded hover:bg-bg-2 text-text-dim hover:text-brand"
+                          title="PDF"
+                          disabled={downloadingId === q.id}
+                          onClick={() => handlePdf(q)}
+                        >
+                          {downloadingId === q.id ? <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin block" /> : <FileDown size={14} />}
+                        </button>
                         <button
                           className="p-1.5 rounded hover:bg-bg-2 text-text-dim hover:text-brand"
                           title="Enviar WhatsApp"
@@ -336,7 +475,7 @@ export default function OrcamentosPage() {
                             }
                           }}
                         >
-                          <Send size={14} />
+                          {sendingId === q.id ? <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin block" /> : sentOkId === q.id ? <span className="text-brand-dark"><Send size={14} /></span> : <Send size={14} />}
                         </button>
                         <button className="p-1.5 rounded hover:bg-bg-2 text-text-dim hover:text-brand" title="Duplicar" disabled={duplicatingId === q.id} onClick={() => handleDuplicate(q.id)}>
                           <Copy size={14} />
@@ -355,9 +494,9 @@ export default function OrcamentosPage() {
       )}
 
       {sendMsg && (
-        <div className="fixed bottom-6 right-6 bg-bg-1 border border-border rounded-lg shadow-lg px-4 py-3 text-sm z-50">
-          {sendMsg}
-          <button className="ml-3 text-text-muted" onClick={() => setSendMsg('')}><X size={14} /></button>
+        <div className={`fixed bottom-6 right-6 rounded-lg shadow-lg px-4 py-3 text-sm z-50 border ${sendMsg.kind === 'ok' ? 'bg-bg-1 border-border' : 'bg-danger text-white border-danger'}`}>
+          {sendMsg.text}
+          <button className={`ml-3 ${sendMsg.kind === 'ok' ? 'text-text-muted' : 'text-white/70'}`} onClick={() => setSendMsg(null)}><X size={14} /></button>
         </div>
       )}
 
@@ -366,7 +505,7 @@ export default function OrcamentosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setSendPhoneOpen(null)}>
           <div className="bg-bg-1 border border-border rounded-2xl p-6 w-[92%] max-w-sm" onClick={e => e.stopPropagation()}>
             <h3 className="font-display font-bold text-lg mb-4">Enviar por WhatsApp</h3>
-            <p className="text-xs text-text-dim mb-3">Este orçamento não tem contato vinculado. Informe o telefone:</p>
+            <p className="text-xs text-text-dim mb-3">Este orçamento não tem cliente com telefone válido. Informe o número:</p>
             <Input
               value={sendPhone}
               onChange={(e) => setSendPhone(e.target.value)}
@@ -374,8 +513,8 @@ export default function OrcamentosPage() {
             />
             <div className="flex gap-2 justify-end mt-4">
               <Button variant="ghost" onClick={() => setSendPhoneOpen(null)}>Cancelar</Button>
-              <Button variant="primary" disabled={!sendPhone.trim()} onClick={() => handleSend(sendPhoneOpen, sendPhone.trim())}>
-                <Send size={14} /> Enviar
+              <Button variant="primary" disabled={!sendPhone.trim() || sendingId === sendPhoneOpen} onClick={() => handleSend(sendPhoneOpen, sendPhone.trim())}>
+                {sendingId === sendPhoneOpen ? <><span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" /> Enviando...</> : <><Send size={14} /> Enviar</>}
               </Button>
             </div>
           </div>
@@ -389,6 +528,100 @@ export default function OrcamentosPage() {
         title={editing ? `Editar Orçamento #${editing.number || editing.id.slice(0, 8)}` : 'Novo Orçamento'}
         size="lg"
       >
+        {/* Cliente */}
+        <div className="mb-5">
+          <label className="block text-[11px] font-semibold uppercase tracking-wide text-text-dim mb-1.5">Cliente</label>
+          {selectedContact ? (
+            <div className="flex items-center justify-between bg-bg-2 border border-border rounded-lg px-3 py-2.5">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-text truncate">{selectedContact.name || selectedContact.custom_name || 'Sem nome'}</div>
+                <div className="text-xs text-text-dim truncate">
+                  {[selectedContact.phone, selectedContact.document, selectedContact.company].filter(Boolean).join(' · ') || '—'}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button className="p-1.5 rounded hover:bg-bg-3 text-text-muted hover:text-brand" title="Trocar cliente" onClick={() => { setContactPickerOpen(true); searchContacts(''); }}>
+                  <Pencil size={13} />
+                </button>
+                <button className="p-1.5 rounded hover:bg-bg-3 text-text-muted hover:text-danger" title="Remover cliente" onClick={clearContact}>
+                  <X size={13} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button className="flex-1 flex items-center justify-center gap-2 border border-dashed border-border rounded-lg px-3 py-2.5 text-sm text-text-dim hover:border-brand hover:text-brand transition-all" onClick={() => { setContactPickerOpen(true); searchContacts(''); }}>
+                <Search size={14} /> Selecionar cliente
+              </button>
+              <button className="flex-1 flex items-center justify-center gap-2 border border-dashed border-border rounded-lg px-3 py-2.5 text-sm text-text-dim hover:border-brand hover:text-brand transition-all" onClick={() => { setNewContactMode(true); setContactPickerOpen(false); }}>
+                <UserPlus size={14} /> Novo Cliente
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Picker de cliente */}
+        {contactPickerOpen && (
+          <div className="mb-5 border border-border rounded-xl overflow-hidden">
+            <div className="flex items-center gap-2 bg-bg-2 px-3 py-2 border-b border-border">
+              <Search size={14} className="text-text-muted" />
+              <input
+                className="bg-transparent border-none outline-none flex-1 text-sm"
+                placeholder="Buscar cliente por nome, telefone, empresa..."
+                value={contactSearch}
+                onChange={(e) => { setContactSearch(e.target.value); searchContacts(e.target.value) }}
+              />
+              <button className="p-1 rounded hover:bg-bg-3 text-text-muted" onClick={() => { setContactPickerOpen(false); setNewContactMode(true); }}>
+                <UserPlus size={15} /> <span className="text-xs font-semibold">Novo</span>
+              </button>
+            </div>
+            <div className="max-h-52 overflow-y-auto">
+              {contacts.length === 0 ? (
+                <div className="text-center py-6 text-xs text-text-muted">Nenhum cliente encontrado.</div>
+              ) : contacts.map((c) => (
+                <button
+                  key={c.id}
+                  className="w-full text-left px-3 py-2 hover:bg-bg-2 border-b border-border last:border-0"
+                  onClick={() => pickContact(c)}
+                >
+                  <div className="text-sm font-semibold text-text">{c.custom_name || c.name || 'Sem nome'}</div>
+                  <div className="text-xs text-text-dim truncate">{[c.phone, c.company, c.email].filter(Boolean).join(' · ') || '—'}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Novo cliente */}
+        {newContactMode && !contactPickerOpen && (
+          <div className="mb-5 border border-brand/30 bg-brand-soft/20 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-display font-bold text-sm text-brand-dark">Novo Cliente</h3>
+              <button className="p-1 rounded hover:bg-bg-3 text-text-muted" onClick={() => { setNewContactMode(false); setContactPickerOpen(true); }}>
+                <X size={14} />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input label="Nome *" value={newContact.name} onChange={(e) => setNewContact({ ...newContact, name: e.target.value })} placeholder="Nome / Razão Social" />
+              <Input label="Telefone / WhatsApp *" value={newContact.phone} onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })} placeholder="+55 (15) 99999-9999" />
+              <Input label="E-mail" value={newContact.email} onChange={(e) => setNewContact({ ...newContact, email: e.target.value })} placeholder="cliente@email.com" />
+              <Input label="Empresa" value={newContact.company} onChange={(e) => setNewContact({ ...newContact, company: e.target.value })} />
+              <Input label="CPF / CNPJ" value={newContact.document} onChange={(e) => setNewContact({ ...newContact, document: e.target.value })} placeholder="000.000.000-00" />
+              <Input label="Endereço" value={newContact.address_line} onChange={(e) => setNewContact({ ...newContact, address_line: e.target.value })} placeholder="Rua, número, complemento" />
+              <Input label="Cidade" value={newContact.address_city} onChange={(e) => setNewContact({ ...newContact, address_city: e.target.value })} />
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="UF" value={newContact.address_state} onChange={(e) => setNewContact({ ...newContact, address_state: e.target.value })} placeholder="SP" />
+                <Input label="CEP" value={newContact.address_zip} onChange={(e) => setNewContact({ ...newContact, address_zip: e.target.value })} placeholder="00000-000" />
+              </div>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button variant="primary" size="sm" disabled={creatingContact} onClick={createContactAndAttach}>
+                {creatingContact ? <><span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" /> Criando...</> : <><UserPlus size={14} /> Criar e vincular</>}
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <Input
@@ -505,9 +738,9 @@ export default function OrcamentosPage() {
           <div className="flex gap-2">
             {editing && (
               <>
-                <a href={pdfUrl(editing.id)} target="_blank" rel="noopener noreferrer">
-                  <Button variant="ghost" size="sm"><FileDown size={14} /> Gerar PDF</Button>
-                </a>
+                <Button variant="ghost" size="sm" disabled={downloadingId === editing.id} onClick={() => handlePdf(editing)}>
+                  {downloadingId === editing.id ? <><span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" /> Gerando...</> : <><FileDown size={14} /> Gerar PDF</>}
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -517,7 +750,9 @@ export default function OrcamentosPage() {
                     else { setSendPhoneOpen(editing.id); setSendPhone(editing.contact_phone || '') }
                   }}
                 >
-                  <Send size={14} /> Enviar WhatsApp
+                  {sendingId === editing.id
+                    ? <><span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" /> Enviando...</>
+                    : sentOkId === editing.id ? <><Send size={14} /> Enviado ✓</> : <><Send size={14} /> Enviar WhatsApp</>}
                 </Button>
               </>
             )}

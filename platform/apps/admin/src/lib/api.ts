@@ -13,8 +13,16 @@ export async function api(path: string, opts: RequestInit = {}, token?: string) 
   }
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
-    try { msg = (await res.json()).error || msg; } catch {}
-    throw new Error(msg);
+    let code: string | undefined;
+    try {
+      const body = await res.json();
+      msg = body.error || msg;
+      code = body.code;
+    } catch {}
+    const err: any = new Error(msg);
+    err.status = res.status;
+    err.code = code;
+    throw err;
   }
   return res.json();
 }

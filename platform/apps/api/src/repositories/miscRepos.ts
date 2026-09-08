@@ -111,7 +111,7 @@ export interface QuoteRow {
 }
 export const QuoteRepository = {
   async list(filter?: { contact_id?: string; conversation_id?: string; status?: string }): Promise<any[]> {
-    let sql = `SELECT q.*, c.name as contact_name, c.phone as contact_phone, c.custom_name,
+    let sql = `SELECT q.*, c.name as contact_name, c.phone as contact_phone, c.custom_name, c.email as contact_email, c.company as contact_company,
                l.name as lead_name, u.name as user_name
                FROM quotes q
                LEFT JOIN contacts c ON c.id = q.contact_id
@@ -126,6 +126,7 @@ export const QuoteRepository = {
   },
   async findById(id: string): Promise<any> {
     return (await q1(`SELECT q.*, c.name as contact_name, c.phone as contact_phone, c.custom_name, c.document as contact_document,
+               c.email as contact_email, c.company as contact_company,
                c.address_line, c.address_city, c.address_state, c.address_zip,
                l.name as lead_name, u.name as user_name
                FROM quotes q
@@ -159,7 +160,7 @@ export const QuoteRepository = {
     await qe(`UPDATE quotes SET sent_at = now(), sent_by = $2, status = 'sent', updated_at = now() WHERE id = $1`, [id, userId]);
   },
   async findExpiringSoon(days: number = 3): Promise<any[]> {
-    return (await q(`SELECT * FROM quotes WHERE retention_expires_at <= now() + interval '${days} days' AND status NOT IN ('deleted') AND sent_at IS NOT NULL`)) as any[];
+    return (await q(`SELECT * FROM quotes WHERE retention_expires_at <= now() + ($1 || ' days')::interval AND status NOT IN ('deleted') AND sent_at IS NOT NULL`, [days])) as any[];
   },
   async findExpired(): Promise<any[]> {
     return (await q(`SELECT * FROM quotes WHERE retention_expires_at < now() AND status != 'deleted'`)) as any[];

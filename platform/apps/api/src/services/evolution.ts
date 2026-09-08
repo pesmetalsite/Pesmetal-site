@@ -84,7 +84,8 @@ export const Evolution = {
       media,
       fileName,
       caption,
-    });
+      mimetype: mediaType === 'document' ? 'application/pdf' : undefined,
+    }, 40000);
   },
 
   async sendPresence(number: string, presence: 'composing' | 'recording' | 'paused', instanceName?: string) {

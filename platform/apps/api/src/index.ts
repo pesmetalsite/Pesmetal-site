@@ -26,6 +26,7 @@ import { instancesRouter } from './routes/instances.js';
 import { webhookHandler } from './routes/webhook.js';
 import { uploadRouter } from './routes/upload.js';
 import { notificationsRouter } from './routes/notifications.js';
+import { contactsRouter } from './routes/contacts.js';
 
 const PORT = parseInt(process.env.PORT || '4000');
 const START = Date.now();
@@ -48,6 +49,7 @@ const routes: Array<{ prefix: string; handler: (req: any, res: any, url: URL) =>
   { prefix: '/projects', handler: projectsRouter },
   { prefix: '/appointments', handler: appointmentsRouter },
   { prefix: '/quotes', handler: quotesRouter },
+  { prefix: '/contacts', handler: contactsRouter },
   { prefix: '/settings', handler: settingsRouter },
   { prefix: '/dashboard', handler: dashboardRouter },
   { prefix: '/notifications', handler: notificationsRouter },
