@@ -9,6 +9,7 @@ import { ContactRepository } from '../repositories/contactRepo.js';
 import { findOrCreateContactId } from '../services/crm.js';
 import { Evolution } from '../services/evolution.js';
 import { pauseAutomation, resumeAutomation } from '../services/automation.js';
+import { logger } from '../lib/logger.js';
 import { ApiError, asyncHandler } from '../lib/errors.js';
 
 export const whatsappRouter = asyncHandler(async (req, res, url) => {
@@ -53,19 +54,16 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
     return json(res, 200, { conversations });
   }
 
-// POST /whatsapp/conversations/sync — importa histórico da Evolution sem duplicar
+// POST /whatsapp/conversations/sync — importa histórico em background (retorna 202 imediato)
   if (path === '/whatsapp/conversations/sync' && method === 'POST') {
     let body: any = {};
     try { body = await readBody(req); } catch { body = {}; }
     const instanceName = body?.instance_name || body?.instanceName || undefined;
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Sync excedeu o tempo limite (60s)')), SYNC_TIMEOUT_MS));
-    try {
-      const result = await Promise.race([syncConversations(instanceName), timeoutPromise]);
-      return json(res, 200, { ok: true, ...result });
-    } catch (err: any) {
-      return json(res, 504, { error: 'Falha ao sincronizar', code: 'sync_timeout', detail: String(err?.message || err) });
-    }
+    // Processa em segundo plano (o gateway do Railway corta requests > ~30s)
+    void syncConversations(instanceName).catch((err) => {
+      logger.error('sync background failed', { error: String(err?.message || err) });
+    });
+    return json(res, 202, { ok: true, status: 'started', message: 'Sincronização iniciada em segundo plano. As conversas aparecerão em instantes.' });
   }
 
   // /whatsapp/conversations/:id/messages
