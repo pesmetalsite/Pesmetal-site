@@ -6,6 +6,7 @@ import { q1, qe } from '../lib/db.js';
 import { findOrCreateContactId, createLead, recordEvent } from '../services/crm.js';
 import { ConversationRepository, MessageRepository } from '../repositories/conversationRepo.js';
 import { startAutomation, processIncomingMessage } from '../services/automation.js';
+import { createNotification } from '../services/notifications.js';
 import { logger } from '../lib/logger.js';
 
 function isBusinessHour(): boolean {
@@ -18,6 +19,17 @@ function isBusinessHour(): boolean {
 
 async function getSetting(key: string): Promise<string | null> {
   return ((await q1(`SELECT value FROM company_settings WHERE key = $1`, [key])) as any)?.value ?? null;
+}
+
+/** Resolve o nome da instância Evolution para envios (multi-instância). */
+async function resolveInstanceName(instanceId?: string): Promise<string | undefined> {
+  if (instanceId) {
+    const inst = (await q1(`SELECT instance_name FROM whatsapp_instances WHERE id = $1 AND active = 1`, [instanceId])) as any;
+    if (inst?.instance_name) return inst.instance_name;
+  }
+  const def = (await q1(`SELECT instance_name FROM whatsapp_instances WHERE active = 1 AND is_default = 1 ORDER BY created_at ASC LIMIT 1`)) as any;
+  if (def?.instance_name) return def.instance_name;
+  return process.env.EVOLUTION_INSTANCE || undefined;
 }
 
 export async function webhookHandler(req: any, res: any, url: URL) {
@@ -102,6 +114,7 @@ async function handleEvolutionEvent(event: any) {
   const mime = msg?.imageMessage?.mimetype || msg?.documentMessage?.mimetype || msg?.videoMessage?.mimetype || msg?.audioMessage?.mimetype || null;
 
   const contactId = await findOrCreateContactId(phone, { name: pushName });
+  const instanceName = await resolveInstanceName(event?._instanceId);
 
   let conv = await ConversationRepository.findByContactId(contactId);
   if (!conv) {
@@ -109,6 +122,7 @@ async function handleEvolutionEvent(event: any) {
     conv = (await ConversationRepository.findById(id))!;
   }
 
+  const leadWasMissing = !conv.lead_id;
   let leadId = conv.lead_id;
   if (!leadId) {
     const { lead_id } = await createLead({
@@ -117,6 +131,19 @@ async function handleEvolutionEvent(event: any) {
     leadId = lead_id;
     await ConversationRepository.update(conv.id, { lead_id });
     await recordEvent({ lead_id: leadId, type: 'whatsapp_started', description: 'Conversa WhatsApp iniciada' });
+  }
+
+  if (leadWasMissing && leadId) {
+    const leadRow = (await q1(`SELECT name, company, interest FROM leads WHERE id = $1`, [leadId])) as any;
+    const interest = leadRow?.interest || null;
+    const title = interest ? `Novo lead — ${interest}` : 'Novo lead';
+    await createNotification({
+      type: 'new_lead',
+      title,
+      body: `${leadRow?.name || pushName || phone}${leadRow?.company ? ` — ${leadRow.company}` : ''} · origem WhatsApp`,
+      data: { lead_id: leadId, contact_id: contactId, source: 'whatsapp', phone, interest },
+      leadId,
+    });
   }
 
   await MessageRepository.insert({
@@ -142,14 +169,14 @@ async function handleEvolutionEvent(event: any) {
         const { Evolution } = await import('../services/evolution.js');
         try {
           const number = phone.length <= 11 ? `55${phone}` : phone;
-          await Evolution.sendText({ number, text: offHoursMsg });
+          await Evolution.sendText({ number, text: offHoursMsg, instanceName });
         } catch (e: any) {
           logger.error('failed to send off-hours message', { error: String(e?.message || e) });
         }
       }
-      await startAutomation(conv.id);
+      await startAutomation(conv.id, undefined, instanceName);
     } else {
-      await processIncomingMessage(conv.id, text);
+      await processIncomingMessage(conv.id, text, instanceName);
     }
   }
 }

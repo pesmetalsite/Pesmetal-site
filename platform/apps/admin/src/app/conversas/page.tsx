@@ -177,8 +177,8 @@ export default function ConversasPage() {
                         alignSelf: m.direction === 'outgoing' ? 'flex-end' : 'flex-start',
                         maxWidth: '70%',
                         padding: '8px 12px', borderRadius: 12,
-                        background: m.direction === 'outgoing' ? 'var(--accent)' : 'var(--bg-2)',
-                        color: m.direction === 'outgoing' ? '#0a0a0a' : 'var(--text)',
+                        background: m.direction === 'outgoing' ? 'var(--brand)' : 'var(--bg-2)',
+                        color: m.direction === 'outgoing' ? '#ffffff' : 'var(--text)',
                       }}>
                         <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4 }}>
                           {m.sent_by === 'automation' ? '🤖 Automação' : m.direction === 'outgoing' ? '👤 Você' : '👤 Cliente'}

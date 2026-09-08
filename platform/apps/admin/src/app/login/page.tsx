@@ -30,22 +30,22 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
-      {/* Background com gradiente industrial */}
+      {/* Background com gradiente comercial suave */}
       <div
         className="absolute inset-0 -z-10"
         style={{
           background: `
-            radial-gradient(ellipse 60% 60% at 30% 30%, rgba(255, 107, 26, 0.15) 0%, transparent 60%),
-            radial-gradient(ellipse 40% 40% at 70% 70%, rgba(255, 184, 0, 0.08) 0%, transparent 60%),
-            #0a0a0a
+            radial-gradient(ellipse 60% 60% at 30% 30%, rgba(37, 211, 102, 0.1) 0%, transparent 60%),
+            radial-gradient(ellipse 40% 40% at 70% 70%, rgba(18, 140, 74, 0.06) 0%, transparent 60%),
+            #f7f8fa
           `,
         }}
       />
-      {/* Padrão de aço sutil */}
+      {/* Padrão sutil */}
       <div
-        className="absolute inset-0 -z-10 opacity-[0.04]"
+        className="absolute inset-0 -z-10 opacity-[0.03]"
         style={{
-          backgroundImage: 'linear-gradient(45deg, #fff 25%, transparent 25%), linear-gradient(-45deg, #fff 25%, transparent 25%)',
+          backgroundImage: 'linear-gradient(45deg, #1a9e5a 25%, transparent 25%), linear-gradient(-45deg, #1a9e5a 25%, transparent 25%)',
           backgroundSize: '20px 20px',
         }}
       />
@@ -53,7 +53,7 @@ function LoginForm() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-10">
-          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center font-display font-bold text-2xl text-bg-0 shadow-[0_8px_24px_rgba(255,107,26,0.4)]">
+          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center font-display font-bold text-2xl text-white shadow-[0_8px_24px_rgba(18,140,74,0.3)]">
             P
           </div>
           <div>
@@ -64,13 +64,13 @@ function LoginForm() {
 
         <form
           onSubmit={submit}
-          className="bg-gradient-to-b from-bg-1 to-bg-0 border border-border rounded-2xl p-8 shadow-[0_30px_80px_rgba(0,0,0,0.5)]"
+          className="bg-bg-1 border border-border rounded-2xl p-8 shadow-[0_24px_60px_rgba(16,24,40,0.12)]"
         >
           <h1 className="font-display font-bold text-xl mb-1">Entrar no painel</h1>
           <p className="text-sm text-text-dim mb-7">Acesse seu CRM, Kanban e automações.</p>
 
           {error && (
-            <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm mb-5">
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-5">
               <AlertCircle size={16} /> {error}
             </div>
           )}

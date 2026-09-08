@@ -9,12 +9,12 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variants: Record<BadgeVariant, string> = {
-  accent: 'bg-brand-soft text-brand border-brand/30',
-  success: 'bg-emerald-400/15 text-emerald-400 border-emerald-400/30',
-  warn: 'bg-amber-400/15 text-amber-400 border-amber-400/30',
-  danger: 'bg-red-400/15 text-red-400 border-red-400/30',
-  info: 'bg-blue-400/15 text-blue-400 border-blue-400/30',
-  muted: 'bg-zinc-400/15 text-zinc-400 border-zinc-400/30',
+  accent: 'bg-brand-soft text-brand-dark border-brand/30',
+  success: 'bg-emerald-500/15 text-emerald-700 border-emerald-600/30',
+  warn: 'bg-amber-500/15 text-amber-700 border-amber-600/30',
+  danger: 'bg-red-500/15 text-red-700 border-red-600/30',
+  info: 'bg-blue-500/15 text-blue-700 border-blue-600/30',
+  muted: 'bg-zinc-500/15 text-zinc-600 border-zinc-500/30',
 }
 
 export function Badge({ variant = 'muted', className, ...props }: BadgeProps) {

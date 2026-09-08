@@ -63,6 +63,21 @@ export async function qe(sql: string, params: any[] = []): Promise<{ rowCount: n
 /** Migração idempotente: cria as tabelas se não existirem. */
 export async function migrate(): Promise<void> {
   await pool.query(SCHEMA);
+
+  // Colunas novas em `automations` (numérico simples) — idempotente via IF NOT EXISTS.
+  // Não destroem o `graph` existente; automações antigas continuam funcionando.
+  const alters = [
+    `ALTER TABLE automations ADD COLUMN IF NOT EXISTS initial_message text`,
+    `ALTER TABLE automations ADD COLUMN IF NOT EXISTS options text`,
+    `ALTER TABLE automations ADD COLUMN IF NOT EXISTS invalid_message text`,
+  ];
+  for (const sql of alters) {
+    try {
+      await pool.query(sql);
+    } catch (err: any) {
+      console.warn('[migrate] alter ignorado', { sql, error: String(err?.message || err) });
+    }
+  }
 }
 
 /** Seed de dados padrão (idempotente) — roda na inicialização. */
@@ -306,6 +321,9 @@ CREATE TABLE IF NOT EXISTS automations (
     keyword text,
     status text DEFAULT 'draft',
     graph text,
+    initial_message text,
+    options text,
+    invalid_message text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -404,5 +422,19 @@ CREATE TABLE IF NOT EXISTS whatsapp_instances (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id text PRIMARY KEY,
+    user_id text,
+    type text,
+    title text NOT NULL,
+    body text,
+    data text,
+    read integer NOT NULL DEFAULT 0,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read_created
+    ON notifications (user_id, read, created_at DESC);
 
 `;

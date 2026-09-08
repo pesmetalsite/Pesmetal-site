@@ -175,6 +175,9 @@ CREATE TABLE IF NOT EXISTS automations (
     keyword text,
     status text DEFAULT 'draft',
     graph text,
+    initial_message text,
+    options text,
+    invalid_message text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -273,3 +276,17 @@ CREATE TABLE IF NOT EXISTS whatsapp_instances (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id text PRIMARY KEY,
+    user_id text,
+    type text,
+    title text NOT NULL,
+    body text,
+    data text,
+    read integer NOT NULL DEFAULT 0,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read_created
+    ON notifications (user_id, read, created_at DESC);

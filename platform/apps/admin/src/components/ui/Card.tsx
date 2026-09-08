@@ -14,7 +14,7 @@ export function Card({ title, description, action, elevated, className, children
     <div
       className={cn(
         'rounded-xl border border-border',
-        elevated ? 'bg-bg-1 shadow-[0_8px_24px_rgba(0,0,0,0.4)]' : 'bg-gradient-to-b from-bg-1 to-bg-0 shadow-[0_1px_3px_rgba(0,0,0,0.5)]',
+        elevated ? 'bg-bg-1 shadow-[0_8px_24px_rgba(16,24,40,0.08)]' : 'bg-bg-1 border-border shadow-[0_1px_3px_rgba(16,24,40,0.06)]',
         className,
       )}
       {...props}

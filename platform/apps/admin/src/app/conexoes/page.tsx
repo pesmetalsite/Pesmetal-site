@@ -167,7 +167,7 @@ export default function ConexoesPage() {
         {/* Modal QR Code */}
         {pendingInstance && (
           <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000,
+            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 1000,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
           }}>
             <div style={{

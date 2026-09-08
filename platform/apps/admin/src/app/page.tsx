@@ -139,8 +139,8 @@ export default function DashboardPage() {
 
 function Mini({ label, value, variant }: any) {
   const colors: any = {
-    success: 'text-emerald-400',
-    danger: 'text-red-400',
+    success: 'text-emerald-600',
+    danger: 'text-red-600',
   }
   return (
     <div>

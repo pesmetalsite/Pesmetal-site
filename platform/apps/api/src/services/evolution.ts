@@ -18,8 +18,8 @@ function getApiKey(): string {
   return process.env.EVOLUTION_API_KEY || '';
 }
 
-interface SendTextInput { number: string; text: string; delay?: number; }
-interface SendMediaInput { number: string; mediaType: 'image' | 'document' | 'video' | 'audio'; media: string; fileName?: string; caption?: string; }
+interface SendTextInput { number: string; text: string; delay?: number; instanceName?: string; }
+interface SendMediaInput { number: string; mediaType: 'image' | 'document' | 'video' | 'audio'; media: string; fileName?: string; caption?: string; instanceName?: string; }
 
 async function call(path: string, method: string, body?: any) {
   const baseUrl = getBaseUrl();
@@ -61,16 +61,16 @@ export const Evolution = {
     }
   },
 
-  async sendText({ number, text, delay }: SendTextInput) {
-    return call(`/message/sendText/${DEFAULT_INSTANCE}`, 'POST', {
+  async sendText({ number, text, delay, instanceName }: SendTextInput) {
+    return call(`/message/sendText/${resolveInstance(instanceName)}`, 'POST', {
       number,
       text,
       delay: delay ?? 0,
     });
   },
 
-  async sendMedia({ number, mediaType, media, fileName, caption }: SendMediaInput) {
-    return call(`/message/sendMedia/${DEFAULT_INSTANCE}`, 'POST', {
+  async sendMedia({ number, mediaType, media, fileName, caption, instanceName }: SendMediaInput) {
+    return call(`/message/sendMedia/${resolveInstance(instanceName)}`, 'POST', {
       number,
       mediatype: mediaType,
       media,
@@ -79,9 +79,9 @@ export const Evolution = {
     });
   },
 
-  async sendPresence(number: string, presence: 'composing' | 'recording' | 'paused') {
+  async sendPresence(number: string, presence: 'composing' | 'recording' | 'paused', instanceName?: string) {
     try {
-      return call(`/message/sendPresence/${DEFAULT_INSTANCE}`, 'POST', { number, presence });
+      return call(`/message/sendPresence/${resolveInstance(instanceName)}`, 'POST', { number, presence });
     } catch {
       return null;
     }

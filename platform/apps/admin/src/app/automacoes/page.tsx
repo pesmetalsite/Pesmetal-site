@@ -1,129 +1,183 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { Copy, Pencil, Plus, Power, Trash2, Zap } from 'lucide-react'
 import AppShell from '@/components/AppShell'
+import { AutomationEditor } from '@/components/automations/AutomationEditor'
+import { parseOptions, serializeOptions } from '@/components/automations/options'
+import type { AutomationSummary, Stage } from '@/components/automations/types'
+import { Badge, Button, Card, Empty, Loading } from '@/components/ui'
 import { api, getToken } from '@/lib/api'
 
 export default function AutomacoesPage() {
-  const [autos, setAutos] = useState<any[]>([])
+  const [autos, setAutos] = useState<AutomationSummary[]>([])
+  const [stages, setStages] = useState<Stage[]>([])
   const [loading, setLoading] = useState(true)
-  const [wa, setWa] = useState<any>(null)
-  const [editing, setEditing] = useState<any>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState<AutomationSummary | null>(null)
 
   const load = async () => {
-    const [a, w] = await Promise.all([
-      api('/automations', {}, getToken()!),
-      api('/whatsapp/status', {}, getToken()!).catch(() => ({ state: 'unconfigured' })),
-    ])
-    setAutos(a.automations); setWa(w); setLoading(false)
+    try {
+      const [a, s] = await Promise.all([
+        api('/automations', {}, getToken()!),
+        api('/kanban/stages', {}, getToken()!).catch(() => ({ stages: [] })),
+      ])
+      setAutos(a.automations || [])
+      setStages(s.stages || [])
+    } catch (e: any) {
+      setError(e?.message || 'Erro ao carregar automações.')
+    } finally {
+      setLoading(false)
+    }
   }
   useEffect(() => { load() }, [])
 
+  const run = async (id: string | null, fn: () => Promise<void>) => {
+    setBusyId(id)
+    setError(null)
+    try {
+      await fn()
+      await load()
+    } catch (e: any) {
+      setError(e?.message || 'Erro na operação.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const toggleStatus = (a: AutomationSummary) =>
+    run(a.id, async () => {
+      const d = (await api(`/automations/${a.id}`, {}, getToken()!)).automation
+      const payload = {
+        name: d.name,
+        description: d.description || '',
+        status: d.status === 'active' ? 'inactive' : 'active',
+        initial_message: d.initial_message || '',
+        options: serializeOptions(parseOptions(d.options)),
+        invalid_message: d.invalid_message || '',
+      }
+      await api(`/automations/${a.id}`, { method: 'PUT', body: JSON.stringify(payload) }, getToken()!)
+    })
+
+  const duplicate = (a: AutomationSummary) =>
+    run(a.id, async () => {
+      const d = (await api(`/automations/${a.id}`, {}, getToken()!)).automation
+      const payload = {
+        name: `${d.name} (cópia)`,
+        description: d.description || '',
+        status: d.status,
+        initial_message: d.initial_message || '',
+        options: serializeOptions(parseOptions(d.options)),
+        invalid_message: d.invalid_message || '',
+      }
+      await api('/automations', { method: 'POST', body: JSON.stringify(payload) }, getToken()!)
+    })
+
+  const remove = (a: AutomationSummary) => {
+    if (!confirm(`Excluir a automação "${a.name}"?`)) return
+    run(a.id, async () => {
+      await api(`/automations/${a.id}`, { method: 'DELETE' }, getToken()!)
+    })
+  }
+
   const seed = async () => {
-    if (!confirm('Instalar automação padrão "Atendimento Principal"? Ela substituirá qualquer automação com mesmo nome.')) return
-    await api('/automations/seed-defaults', { method: 'POST' }, getToken()!)
-    load()
+    if (!confirm('Instalar a automação padrão "Atendimento Principal"?')) return
+    run(null, async () => {
+      await api('/automations/seed-defaults', { method: 'POST' }, getToken()!)
+    })
   }
 
-  const toggle = async (a: any) => {
-    await api(`/automations/${a.id}`, { method: 'PUT', body: JSON.stringify({ status: a.status === 'active' ? 'inactive' : 'active' }) }, getToken()!)
-    load()
+  const statusBadge = (s: string) => {
+    switch (s) {
+      case 'active': return { label: 'Ativa', variant: 'success' as const }
+      case 'draft': return { label: 'Rascunho', variant: 'warn' as const }
+      case 'archived': return { label: 'Arquivada', variant: 'muted' as const }
+      default: return { label: 'Inativa', variant: 'muted' as const }
+    }
   }
 
   return (
-    <AppShell title="Automações WhatsApp">
-      <div className="card" style={{ marginBottom: 16, padding: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>STATUS DO WHATSAPP</div>
-            <div style={{ fontSize: 20, fontWeight: 700, marginTop: 4 }}>
-              {wa?.state === 'open' && <span style={{ color: 'var(--success)' }}>● Conectado</span>}
-              {wa?.state === 'close' && <span style={{ color: 'var(--danger)' }}>● Desconectado</span>}
-              {wa?.state !== 'open' && wa?.state !== 'close' && <span style={{ color: 'var(--warn)' }}>● {wa?.state || 'desconhecido'}</span>}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-              {wa?.configured ? 'API configurada' : 'Evolution API não configurada — defina EVOLUTION_API_URL/KEY no .env'}
-            </div>
-          </div>
-          <button className="btn btn-primary" onClick={seed}>+ Instalar automação padrão</button>
+    <AppShell title="Automações">
+      <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+        <p className="text-sm text-text-dim max-w-xl">
+          Configure o atendimento automático do WhatsApp com um menu numérico de opções.
+        </p>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={seed}>Instalar padrão</Button>
+          <Button size="md" onClick={() => setCreating(true)}>
+            <Plus size={14} /> Criar automação
+          </Button>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gap: 12 }}>
-        {loading ? <div className="loading">Carregando…</div> :
-          autos.length === 0 ? (
-            <div className="empty">
-              <div className="icon">⚙️</div>
-              <div>Nenhuma automação configurada.</div>
-              <div style={{ fontSize: 12, marginTop: 8, color: 'var(--text-muted)' }}>Clique em "Instalar automação padrão" para começar.</div>
-            </div>
-          ) : autos.map((a: any) => (
-            <div key={a.id} className="card" style={{ padding: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <strong style={{ fontSize: 15 }}>{a.name}</strong>
-                    <span className={'badge ' + (a.status === 'active' ? 'badge-success' : 'badge-muted')}>{a.status}</span>
-                    <span className="badge badge-info">gatilho: {a.trigger}</span>
-                  </div>
-                  {a.description && <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>{a.description}</div>}
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setEditing(a)}>Ver fluxos</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => toggle(a)}>
-                    {a.status === 'active' ? 'Desativar' : 'Ativar'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
-        }
-      </div>
+      {error && (
+        <div className="mb-4 text-sm text-danger bg-red-500/10 border border-red-500/30 rounded-md px-4 py-2.5">{error}</div>
+      )}
 
-      {editing && <AutomationModal automation={editing} onClose={() => { setEditing(null); load() }} />}
+      {loading ? (
+        <Loading />
+      ) : autos.length === 0 ? (
+        <Card>
+          <Empty
+            icon={<Zap size={48} />}
+            title="Nenhuma automação"
+            description="Crie sua primeira automação para responder automaticamente aos novos contatos com um menu de opções."
+            action={<Button onClick={() => setCreating(true)}><Plus size={14} /> Criar automação</Button>}
+          />
+        </Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {autos.map((a) => {
+            const b = statusBadge(a.status)
+            const isActive = a.status === 'active'
+            return (
+              <Card key={a.id} className="flex flex-col">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-display font-bold text-[15px] truncate">{a.name}</h3>
+                  </div>
+                  <div className="mt-2">
+                    <Badge variant={b.variant}>{b.label}</Badge>
+                  </div>
+                  {a.description && <p className="text-xs text-text-dim mt-2 leading-relaxed">{a.description}</p>}
+                </div>
+                <div className="mt-4 pt-4 border-t border-border flex flex-wrap gap-1.5">
+                  <Button variant="ghost" size="sm" onClick={() => setEditing(a)} disabled={busyId === a.id}>
+                    <Pencil size={13} /> Editar
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => duplicate(a)} disabled={busyId === a.id}>
+                    <Copy size={13} /> Duplicar
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => toggleStatus(a)} loading={busyId === a.id}>
+                    <Power size={13} /> {isActive ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button variant="danger" size="sm" onClick={() => remove(a)} disabled={busyId === a.id}>
+                    <Trash2 size={13} /> Excluir
+                  </Button>
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+      )}
+
+      {creating && (
+        <AutomationEditor
+          automation={null}
+          stages={stages}
+          onClose={() => setCreating(false)}
+          onSaved={() => load()}
+        />
+      )}
+      {editing && (
+        <AutomationEditor
+          automation={editing}
+          stages={stages}
+          onClose={() => setEditing(null)}
+          onSaved={() => load()}
+        />
+      )}
     </AppShell>
-  )
-}
-
-function AutomationModal({ automation, onClose }: any) {
-  const [detail, setDetail] = useState<any>(null)
-  useEffect(() => {
-    api(`/automations/${automation.id}`, {}, getToken()!).then(r => setDetail(r.automation)).catch(() => {})
-  }, [automation.id])
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 800 }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18 }}>{automation.name}</h2>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
-        </div>
-        {!detail ? <div className="loading">Carregando…</div> : (
-          <>
-            <div style={{ marginBottom: 12, fontSize: 13, color: 'var(--text-dim)' }}>
-              <strong>Fluxo:</strong> {detail.description}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {JSON.parse(detail.graph).nodes.map((n: any) => (
-                <div key={n.id} className="card" style={{ padding: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="badge badge-accent">{n.type}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>→ {n.next || (n.options ? 'aguarda input' : 'fim')}</span>
-                  </div>
-                  {n.config?.text && <div style={{ marginTop: 8, fontSize: 13, whiteSpace: 'pre-wrap' }}>{n.config.text}</div>}
-                  {n.options && (
-                    <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
-                      {n.options.map((o: any, i: number) => (
-                        <div key={i} style={{ fontSize: 12, padding: 4, background: 'var(--bg-2)', borderRadius: 4 }}>
-                          <strong>{o.key}</strong> — {o.label} → {o.next}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
   )
 }

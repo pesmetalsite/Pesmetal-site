@@ -150,7 +150,7 @@ function CardItem({ lead, onClick, dragging }: { lead: Lead; onClick?: () => voi
       </div>
       <div className="flex items-center justify-between text-[10px] text-text-muted">
         <span className="flex items-center gap-1"><Calendar size={10} /> {formatDate(lead.created_at)}</span>
-        {lead.estimated_value > 0 && <span className="font-bold text-emerald-400">R$ {lead.estimated_value.toLocaleString('pt-BR')}</span>}
+        {lead.estimated_value > 0 && <span className="font-bold text-emerald-600">R$ {lead.estimated_value.toLocaleString('pt-BR')}</span>}
       </div>
     </div>
   )

@@ -7,21 +7,21 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#ff6b1a',
-          2: '#ffb800',
-          dark: '#c44500',
-          light: '#ffa463',
-          soft: 'rgba(255, 107, 26, 0.12)',
+          DEFAULT: '#1a9e5a',
+          2: '#34b981',
+          dark: '#128c4a',
+          light: '#63e69f',
+          soft: 'rgba(26, 158, 90, 0.12)',
         },
         bg: {
-          0: '#0a0a0a',
-          1: '#111111',
-          2: '#1a1a1a',
-          3: '#242424',
+          0: '#f7f8fa',
+          1: '#ffffff',
+          2: '#f1f3f5',
+          3: '#e9ecef',
         },
         border: {
-          DEFAULT: '#2a2a2a',
-          strong: '#3a3a3a',
+          DEFAULT: '#e5e8eb',
+          strong: '#d3d9de',
         },
       },
       fontFamily: {

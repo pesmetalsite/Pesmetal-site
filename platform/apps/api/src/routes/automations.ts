@@ -49,7 +49,13 @@ export const automationsRouter = asyncHandler(async (req, res, url) => {
   if (path === '/automations' && method === 'POST') {
     if (user.role === 'atendente') throw ApiError.forbidden();
     const body = parseBody(CreateAutomationSchema, await readBody(req));
-    const id = await AutomationRepository.insert({ ...body, graph: JSON.stringify(body.graph) });
+    const fields: any = { ...body };
+    fields.trigger = body.trigger || 'new_contact';
+    fields.graph = typeof body.graph === 'string' ? body.graph : JSON.stringify(body.graph ?? null);
+    if (body.options !== undefined) {
+      fields.options = typeof body.options === 'string' ? body.options : JSON.stringify(body.options);
+    }
+    const id = await AutomationRepository.insert(fields);
     return json(res, 201, { id });
   }
 
@@ -69,10 +75,15 @@ export const automationsRouter = asyncHandler(async (req, res, url) => {
     }
     if (typeof body !== 'object' || body === null) body = {};
     const fields: any = {};
-    for (const k of ['name','description','trigger','keyword','status'] as const) {
+    for (const k of ['name','description','trigger','keyword','status','initial_message','invalid_message'] as const) {
       if (Object.prototype.hasOwnProperty.call(body, k)) fields[k] = body[k];
     }
-    if (body.graph) fields.graph = JSON.stringify(body.graph);
+    if (body.graph) fields.graph = typeof body.graph === 'string' ? body.graph : JSON.stringify(body.graph);
+    if (body.options !== undefined) {
+      fields.options = typeof body.options === 'string' ? body.options : JSON.stringify(body.options ?? []);
+    } else if (Object.prototype.hasOwnProperty.call(body, 'options')) {
+      fields.options = '[]';
+    }
     await AutomationRepository.update(idMatch[1], fields);
     return json(res, 200, { ok: true });
   }

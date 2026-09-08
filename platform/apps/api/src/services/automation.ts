@@ -1,16 +1,13 @@
 /**
- * Automation Engine v2 — FSM com dispatch table.
+ * Automation Engine — FSM com dispatch table + modo numérico simples.
  *
- * Cada tipo de nó tem um handler tipado. Estado persistido em whatsapp_conversations.
- * Sem IA — regras puras configuráveis pelo painel.
+ * Modo numérico (novo, prioritário):
+ *   A automação tem as colunas `initial_message`, `options` (JSON array) e
+ *   `invalid_message`. O usuário digita o número (1..N) ou o label da opção.
+ *   Cada opção: { id, label, message, stage_id, transfer_human }.
  *
- * Fluxo:
- *   trigger (new_contact/keyword/lead_created)
- *     → resolve automação
- *     → set current_node = entry
- *     → executa handler[entry.type]()
- *     → se handler.next existe → executa próximo
- *     → senão espera input
+ * Modo grafo (legado, compatível):
+ *   FSM com nodes tipados. Estado persistido em whatsapp_conversations.
  */
 import { AutomationRepository } from '../repositories/automationRepo.js';
 import { ConversationRepository, MessageRepository } from '../repositories/conversationRepo.js';
@@ -19,10 +16,10 @@ import { ContactRepository } from '../repositories/contactRepo.js';
 import { StageRepository } from '../repositories/stageRepo.js';
 import { LeadEventRepository } from '../repositories/miscRepos.js';
 import { Evolution } from './evolution.js';
+import { createNotification } from './notifications.js';
 import { logger } from '../lib/logger.js';
-import type { AutomationGraphSchema } from '../lib/validators.js';
-import { z } from 'zod';
 
+// === Tipos do modo grafo (legado) ===
 type NodeConfig = Record<string, any>;
 export interface Node {
   id: string;
@@ -42,6 +39,16 @@ type HandlerContext = {
 };
 type Handler = (ctx: HandlerContext, node: Node, input?: string) => Promise<string | null | undefined>;
 
+// === Modo numérico: tipos ===
+export interface NumericOption {
+  id?: string;
+  label?: string;
+  message?: string;
+  stage_id?: string;
+  transfer_human?: boolean;
+  [key: string]: any;
+}
+
 const handlers: Record<string, Handler> = {
   message: async (ctx, node) => {
     await sendMessage(ctx, node);
@@ -49,13 +56,11 @@ const handlers: Record<string, Handler> = {
   },
   menu: async (ctx, node, input) => {
     if (!input) {
-      // primeira vez: envia menu, espera input
       await sendMenu(ctx, node);
-      return undefined; // fica aguardando
+      return undefined;
     }
     const option = node.options?.find(o => o.key.trim() === input.trim());
     if (!option) {
-      // input inválido: reenvia menu
       await sendMenu(ctx, node);
       return undefined;
     }
@@ -148,7 +153,7 @@ const handlers: Record<string, Handler> = {
   },
 };
 
-// === Helpers ===
+// === Helpers (grafo legado) ===
 async function getLeadId(ctx: HandlerContext): Promise<string | null> {
   const conv = await ConversationRepository.findById(ctx.conversationId);
   return conv?.lead_id ?? null;
@@ -177,7 +182,7 @@ async function sendMessage(ctx: HandlerContext, node: Node) {
     status: 'pending',
   });
   try {
-    await Evolution.sendText({ number, text });
+    await Evolution.sendText({ number, text, instanceName: getStoredInstance(conv) });
     await MessageRepository.updateStatus(msgId, 'sent');
     await ConversationRepository.update(ctx.conversationId, { last_message_at: new Date().toISOString() });
   } catch (err: any) {
@@ -202,18 +207,227 @@ function formatNumber(phone: string) {
   return digits;
 }
 
-function parseGraph(raw: string): Graph {
-  try { return JSON.parse(raw) as Graph; } catch { return { entry: '', nodes: [] }; }
+function parseGraph(raw: string | null | undefined): Graph {
+  if (!raw) return { entry: '', nodes: [] };
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.nodes)) return parsed as Graph;
+    return { entry: '', nodes: [] };
+  } catch { return { entry: '', nodes: [] }; }
+}
+
+// === Helpers do modo numérico ===
+function parseOptions(raw: string | null | undefined): NumericOption[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((o): o is NumericOption => !!o && typeof o === 'object');
+  } catch {
+    return [];
+  }
+}
+
+function hasNumericMode(automation: any): boolean {
+  return !!automation && typeof automation.options === 'string' && automation.options.trim() !== '';
+}
+
+function buildMenuText(options: NumericOption[], header?: string): string {
+  const lines = options.map((o, i) => `${i + 1} — ${o.label || o.id || `Opção ${i + 1}`}`);
+  return `${header || 'Escolha uma opção:'}\n\n${lines.join('\n')}`;
+}
+
+function getStoredInstance(conv: any): string | undefined {
+  if (!conv?.context) return undefined;
+  try {
+    const c = JSON.parse(conv.context);
+    return typeof c.instance === 'string' && c.instance ? c.instance : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function persistInstance(conversationId: string, instanceName?: string): Promise<string | undefined> {
+  if (!instanceName) return undefined;
+  const conv = await ConversationRepository.findById(conversationId);
+  const ctx = conv?.context ? (() => { try { return JSON.parse(conv.context); } catch { return {}; } })() : {};
+  if (ctx.instance === instanceName) return instanceName;
+  await ConversationRepository.update(conversationId, { context: JSON.stringify({ ...ctx, instance: instanceName }) });
+  return instanceName;
+}
+
+async function sendOutboundText(conv: any, text: string, instanceName?: string) {
+  const contact = await ContactRepository.findById(conv.contact_id);
+  if (!contact) return;
+  const number = formatNumber(contact.phone);
+  const msgId = await MessageRepository.insert({
+    conversation_id: conv.id,
+    direction: 'outgoing',
+    type: 'text',
+    content: text,
+    status: 'pending',
+  });
+  try {
+    await Evolution.sendText({ number, text, instanceName });
+    await MessageRepository.updateStatus(msgId, 'sent');
+    await ConversationRepository.update(conv.id, { last_message_at: new Date().toISOString() });
+  } catch (err: any) {
+    await MessageRepository.updateStatus(msgId, 'failed');
+    logger.error('evolution send failed', { conversation_id: conv.id, instanceName, error: String(err?.message || err) });
+  }
+}
+
+async function startNumeric(conversationId: string, automation: any, instanceName?: string) {
+  const options = parseOptions(automation.options);
+  const conv = await ConversationRepository.findById(conversationId);
+  const leadId = conv?.lead_id ?? null;
+  if (leadId) {
+    await LeadEventRepository.insert({
+      lead_id: leadId,
+      type: 'automation_started',
+      payload: { automation_id: automation.id, automation_name: automation.name },
+      description: `Automação "${automation.name}" iniciada`,
+    });
+  }
+  const first = automation.initial_message?.trim();
+  const header = first || (options.length ? 'Escolha uma opção:' : undefined);
+  const menuText = options.length ? buildMenuText(options, header) : (first || undefined);
+  if (menuText && conv) {
+    await sendOutboundText(conv, menuText, instanceName);
+  }
+  await ConversationRepository.update(conversationId, {
+    current_node: options.length ? 'menu' : 'end',
+    automation_status: options.length ? 'running' : 'waiting_input',
+  });
+}
+
+async function handleNumericInput(conv: any, automation: any, message: string, instanceName?: string) {
+  if (conv.current_node === 'end') return;
+
+  const options = parseOptions(automation.options);
+  const trimmed = (message || '').trim();
+  let option: NumericOption | undefined;
+
+  const num = Number(trimmed);
+  if (trimmed && Number.isInteger(num) && String(num) === trimmed && num >= 1 && num <= options.length) {
+    option = options[num - 1];
+  }
+  if (!option) {
+    const lc = trimmed.toLowerCase();
+    option = options.find(o => String(o.id || '').trim().toLowerCase() === lc)
+      || options.find(o => String(o.label || '').trim().toLowerCase() === lc);
+  }
+
+  if (!option) {
+    const invalid = String(automation.invalid_message || '').trim()
+      || 'Opção inválida. Digite o número correspondente a uma das opções.';
+    await sendOutboundText(conv, invalid, instanceName);
+    await ConversationRepository.update(conv.id, { current_node: 'menu', automation_status: 'waiting_input' });
+    return;
+  }
+
+  const contact = await ContactRepository.findById(conv.contact_id);
+  const number = contact ? formatNumber(contact.phone) : null;
+  const label = String(option.label || `Opção ${options.indexOf(option) + 1}`);
+  const leadId: string | null = conv.lead_id ?? null;
+
+  // Opção com transferência humana
+  if (option.transfer_human) {
+    const reply = option.message || 'Vou transferir você para um atendente humano.';
+    if (number) await sendOutboundText(conv, reply, instanceName);
+    const targetStage = option.stage_id || 'stage_atend';
+    await ConversationRepository.update(conv.id, { status: 'human', automation_status: 'transferred', current_node: null });
+
+    if (leadId) {
+      const lead = await LeadRepository.findById(leadId);
+      if (lead) {
+        if (targetStage && lead.stage_id !== targetStage) {
+          const stage = await StageRepository.findById(targetStage);
+          if (stage) {
+            await LeadRepository.updateFields(leadId, { stage_id: targetStage });
+            await LeadEventRepository.insert({
+              lead_id: leadId, type: 'stage_changed',
+              payload: { from: lead.stage_id, to: targetStage },
+              description: `Movido para ${stage.name}`,
+            });
+          }
+        }
+        await createNotification({
+          type: 'human_takeover',
+          title: 'Atendimento humano',
+          body: `${lead.name} solicitou atendimento humano`,
+          data: { lead_id: leadId, automation_id: conv.automation_id, option_id: option.id ?? null, label },
+          leadId,
+          eventType: 'human_takeover',
+          eventDescription: 'Cliente solicitou atendente humano',
+        });
+      }
+    }
+    return;
+  }
+
+  // Opção comum: define interesse, move etapa e cria notificação
+  const reply = option.message || (label ? `Você escolheu ${label}.` : 'Opção registrada.');
+  if (number) await sendOutboundText(conv, reply, instanceName);
+
+  if (leadId) {
+    const lead = await LeadRepository.findById(leadId);
+    if (lead) {
+      if (option.stage_id && lead.stage_id !== option.stage_id) {
+        const stage = await StageRepository.findById(option.stage_id);
+        if (stage) {
+          await LeadRepository.updateFields(leadId, { interest: label, stage_id: option.stage_id });
+          await LeadEventRepository.insert({
+            lead_id: leadId, type: 'stage_changed',
+            payload: { from: lead.stage_id, to: option.stage_id },
+            description: `Movido para ${stage.name}`,
+          });
+        } else {
+          await LeadRepository.updateFields(leadId, { interest: label });
+        }
+      } else {
+        await LeadRepository.updateFields(leadId, { interest: label });
+      }
+      await LeadEventRepository.insert({
+        lead_id: leadId, type: 'service_selected',
+        payload: { label, option_id: option.id ?? null },
+        description: `Interesse: ${label}`,
+      });
+      await createNotification({
+        type: 'service_selected',
+        title: `Novo lead — ${label}`,
+        body: `${lead.name}${lead.company ? ` (${lead.company})` : ''} escolheu ${label}`,
+        data: { lead_id: leadId, automation_id: conv.automation_id, option_id: option.id ?? null, label, stage_id: option.stage_id ?? null },
+        leadId,
+        eventType: 'service_selected',
+        eventDescription: `Interesse: ${label}`,
+      });
+    }
+  }
+
+  await ConversationRepository.update(conv.id, { current_node: 'end', automation_status: 'waiting_input' });
 }
 
 // === Engine público ===
-export async function startAutomation(conversationId: string, automationId?: string): Promise<boolean> {
+export async function startAutomation(conversationId: string, automationId?: string, instanceName?: string): Promise<boolean> {
   const automation = automationId
     ? await AutomationRepository.findById(automationId)
     : (await AutomationRepository.listActive())[0];
   if (!automation) {
     logger.warn('no active automation available', { conversationId });
     return false;
+  }
+
+  if (hasNumericMode(automation)) {
+    await ConversationRepository.update(conversationId, {
+      automation_id: automation.id,
+      automation_status: 'running',
+      current_node: 'menu',
+      status: 'active',
+    });
+    const persisted = await persistInstance(conversationId, instanceName);
+    await startNumeric(conversationId, automation, persisted);
+    return true;
   }
 
   const graph = parseGraph(automation.graph);
@@ -229,6 +443,8 @@ export async function startAutomation(conversationId: string, automationId?: str
     status: 'active',
   });
 
+  await persistInstance(conversationId, instanceName);
+
   const leadId = await getLeadId({ conversationId, automationId: automation.id, graph });
   await LeadEventRepository.insert({
     lead_id: leadId,
@@ -241,20 +457,25 @@ export async function startAutomation(conversationId: string, automationId?: str
   return true;
 }
 
-export async function processIncomingMessage(conversationId: string, message: string): Promise<void> {
+export async function processIncomingMessage(conversationId: string, message: string, instanceName?: string): Promise<void> {
   const conv = await ConversationRepository.findById(conversationId);
   if (!conv) return;
   if (conv.automation_status === 'paused' || conv.status === 'human') return;
 
   const automation = conv.automation_id ? await AutomationRepository.findById(conv.automation_id) : null;
   if (!automation) {
-    await startAutomation(conversationId);
+    await startAutomation(conversationId, undefined, instanceName);
+    return;
+  }
+
+  if (hasNumericMode(automation)) {
+    await handleNumericInput(conv, automation, message, instanceName ?? getStoredInstance(conv));
     return;
   }
 
   const graph = parseGraph(automation.graph);
   if (!conv.current_node) {
-    await startAutomation(conversationId);
+    await startAutomation(conversationId, undefined, instanceName);
     return;
   }
 
@@ -278,7 +499,6 @@ async function runNode(ctx: HandlerContext, nodeId: string, input?: string): Pro
   try {
     const next = await handler(ctx, node, input);
     if (next === undefined) {
-      // fica aguardando input
       await ConversationRepository.update(ctx.conversationId, { automation_status: 'waiting_input' });
       return;
     }

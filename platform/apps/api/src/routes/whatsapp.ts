@@ -53,60 +53,13 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
     return json(res, 200, { conversations });
   }
 
-  // POST /whatsapp/conversations/sync — importa histórico da Evolution sem duplicar
+// POST /whatsapp/conversations/sync — importa histórico da Evolution sem duplicar
   if (path === '/whatsapp/conversations/sync' && method === 'POST') {
-    const raw = await Evolution.findMessages({ limit: 10000 });
-    const records = Array.isArray(raw) ? raw : raw?.messages?.records || raw?.messages || raw?.records || [];
-    let imported = 0;
-    let skipped = 0;
-    let groups = 0;
-    const errors: string[] = [];
-
-    for (const item of records) {
-      const key = item?.key || {};
-      const remoteJid = String(key.remoteJid || '');
-      if (!remoteJid || remoteJid.endsWith('@g.us')) { groups += 1; continue; }
-      const phone = (key.participantAlt || remoteJid.split('@')[0] || '').replace(/\D/g, '');
-      if (!phone) { skipped += 1; continue; }
-      const externalId = String(key.id || item.id || '');
-      if (externalId && await MessageRepository.findByExternalId(externalId)) { skipped += 1; continue; }
-
-      try {
-        const message = item.message || {};
-        const content = message.conversation || message.extendedTextMessage?.text ||
-          message.imageMessage?.caption || message.documentMessage?.caption || message.videoMessage?.caption || '';
-        const type = message.imageMessage ? 'image' : message.videoMessage ? 'video' :
-          message.audioMessage ? 'audio' : message.documentMessage ? 'document' : 'text';
-        const mediaUrl = message.imageMessage?.url || message.documentMessage?.url || message.videoMessage?.url || message.audioMessage?.url || null;
-        const mime = message.imageMessage?.mimetype || message.documentMessage?.mimetype || message.videoMessage?.mimetype || message.audioMessage?.mimetype || null;
-        const contactId = await findOrCreateContactId(phone, { name: item.pushName || phone });
-        let conversation = await ConversationRepository.findByContactId(contactId);
-        if (!conversation) {
-          const id = await ConversationRepository.insert({ contact_id: contactId, status: 'active', automation_status: 'idle' });
-          conversation = (await ConversationRepository.findById(id))!;
-        }
-        const ts = Number(item.messageTimestamp || item.timestamp || 0);
-        const createdAt = ts > 0 ? new Date(ts < 1e12 ? ts * 1000 : ts).toISOString() : undefined;
-        await MessageRepository.insert({
-          external_id: externalId || null,
-          conversation_id: conversation.id,
-          direction: key.fromMe ? 'outgoing' : 'incoming',
-          type: type as any,
-          content,
-          media_url: mediaUrl,
-          media_mime: mime,
-          status: key.fromMe ? 'sent' : 'received',
-          metadata: JSON.stringify({ imported: true, remoteJid }),
-          created_at: createdAt,
-        });
-        if (createdAt) await ConversationRepository.update(conversation.id, { last_message_at: createdAt });
-        imported += 1;
-      } catch (error: any) {
-        errors.push(`${externalId || phone}: ${String(error?.message || error)}`);
-      }
-    }
-
-    return json(res, 200, { ok: true, chats: new Set(records.map((r: any) => r?.key?.remoteJid).filter(Boolean)).size, messages_found: records.length, messages_imported: imported, messages_skipped: skipped, groups_skipped: groups, errors: errors.slice(0, 20) });
+    let body: any = {};
+    try { body = await readBody(req); } catch { body = {}; }
+    const instanceName = body?.instance_name || body?.instanceName || undefined;
+    const result = await syncConversations(instanceName);
+    return json(res, 200, { ok: true, ...result });
   }
 
   // /whatsapp/conversations/:id/messages
@@ -162,4 +115,149 @@ function formatNumber(phone: string) {
   const digits = (phone || '').replace(/\D/g, '');
   if (digits.length <= 11) return `55${digits}`;
   return digits;
+}
+
+// === Sync de conversas (mínimo 50 chats) ===
+const SYNC_TARGET = 50;
+
+function extractMessageRecords(raw: any): any[] {
+  if (Array.isArray(raw)) return raw;
+  return raw?.messages?.records || raw?.messages || raw?.records || [];
+}
+
+function chatUpdatedAt(chat: any): number {
+  const v = Number(chat?.t || chat?.updatedAt || chat?.lastMessageTimestamp || chat?.lastMessageAt || 0);
+  return v || 0;
+}
+
+async function syncConversations(instanceName?: string) {
+  let imported = 0;
+  let skipped = 0;
+  let messagesFound = 0;
+  const errors: string[] = [];
+  const seenJids = new Set<string>();
+  const groupJids = new Set<string>();
+  let processed = 0;
+
+  const importMessage = async (item: any): Promise<void> => {
+    const key = item?.key || {};
+    const remoteJid = String(key.remoteJid || '');
+    if (!remoteJid || remoteJid.endsWith('@g.us')) {
+      if (remoteJid) groupJids.add(remoteJid);
+      return;
+    }
+    const phone = (key.participantAlt || remoteJid.split('@')[0] || '').replace(/\D/g, '');
+    if (!phone) { skipped += 1; return; }
+    const externalId = String(key.id || item.id || '');
+    if (externalId && await MessageRepository.findByExternalId(externalId)) { skipped += 1; return; }
+
+    const message = item.message || {};
+    const content = message.conversation || message.extendedTextMessage?.text ||
+      message.imageMessage?.caption || message.documentMessage?.caption || message.videoMessage?.caption || '';
+    const type = message.imageMessage ? 'image' : message.videoMessage ? 'video' :
+      message.audioMessage ? 'audio' : message.documentMessage ? 'document' : 'text';
+    const mediaUrl = message.imageMessage?.url || message.documentMessage?.url || message.videoMessage?.url || message.audioMessage?.url || null;
+    const mime = message.imageMessage?.mimetype || message.documentMessage?.mimetype || message.videoMessage?.mimetype || message.audioMessage?.mimetype || null;
+    const contactId = await findOrCreateContactId(phone, { name: item.pushName || phone });
+    let conversation = await ConversationRepository.findByContactId(contactId);
+    if (!conversation) {
+      const id = await ConversationRepository.insert({ contact_id: contactId, status: 'active', automation_status: 'idle' });
+      conversation = (await ConversationRepository.findById(id))!;
+    }
+    const ts = Number(item.messageTimestamp || item.timestamp || 0);
+    const createdAt = ts > 0 ? new Date(ts < 1e12 ? ts * 1000 : ts).toISOString() : undefined;
+    await MessageRepository.insert({
+      external_id: externalId || null,
+      conversation_id: conversation.id,
+      direction: key.fromMe ? 'outgoing' : 'incoming',
+      type: type as any,
+      content,
+      media_url: mediaUrl,
+      media_mime: mime,
+      status: key.fromMe ? 'sent' : 'received',
+      metadata: JSON.stringify({ imported: true, remoteJid }),
+      created_at: createdAt,
+    });
+    if (createdAt) await ConversationRepository.update(conversation.id, { last_message_at: createdAt });
+    imported += 1;
+  };
+
+  const importChat = async (remoteJid: string): Promise<boolean> => {
+    if (seenJids.has(remoteJid)) return false;
+    seenJids.add(remoteJid);
+    if (remoteJid.endsWith('@g.us')) { groupJids.add(remoteJid); return false; }
+    try {
+      const raw = await Evolution.findMessages({ number: remoteJid, limit: 10000, instanceName });
+      const records = extractMessageRecords(raw);
+      messagesFound += records.length;
+      for (const item of records) {
+        try { await importMessage(item); } catch (e: any) { errors.push(`${remoteJid}: ${String(e?.message || e)}`); }
+      }
+      return true;
+    } catch (e: any) {
+      errors.push(`findMessages ${remoteJid}: ${String(e?.message || e)}`);
+      return false;
+    }
+  };
+
+  // 1) Chats recentes via findChats (top 50 por updatedAt)
+  try {
+    const chatsRaw = await Evolution.findChats({ instanceName });
+    const chats = Array.isArray(chatsRaw) ? chatsRaw : chatsRaw?.chats || chatsRaw?.records || [];
+    const ordered = chats
+      .map((c: any) => ({ remoteJid: String(c?.key?.remoteJid || c?.remoteJid || ''), ts: chatUpdatedAt(c) }))
+      .filter((c: any) => c.remoteJid)
+      .sort((a: any, b: any) => b.ts - a.ts);
+    for (const c of ordered) {
+      if (processed >= SYNC_TARGET) break;
+      if (await importChat(c.remoteJid)) processed += 1;
+    }
+  } catch (e: any) {
+    errors.push(`findChats: ${String(e?.message || e)}`);
+  }
+
+  // 2) Fallback: findMessages global agrupado por chat quando findChats não rendeu 50
+  if (processed < SYNC_TARGET) {
+    try {
+      const rawAll = await Evolution.findMessages({ limit: 10000, instanceName });
+      const records = extractMessageRecords(rawAll);
+      messagesFound += records.length;
+      const byJid = new Map<string, any[]>();
+      for (const r of records) {
+        const remoteJid = String(r?.key?.remoteJid || '');
+        if (!remoteJid) continue;
+        if (remoteJid.endsWith('@g.us')) { groupJids.add(remoteJid); continue; }
+        const arr = byJid.get(remoteJid) || [];
+        arr.push(r);
+        byJid.set(remoteJid, arr);
+      }
+      const groups = [...byJid.entries()]
+        .map(([jid, msgs]) => ({
+          jid,
+          ts: Math.max(0, ...msgs.map(m => Number(m.messageTimestamp || m.timestamp || 0))),
+        }))
+        .sort((a, b) => b.ts - a.ts);
+      for (const g of groups) {
+        if (processed >= SYNC_TARGET) break;
+        if (seenJids.has(g.jid)) continue;
+        seenJids.add(g.jid);
+        const chatRecords = byJid.get(g.jid) || [];
+        for (const item of chatRecords) {
+          try { await importMessage(item); } catch (e: any) { errors.push(`${g.jid}: ${String(e?.message || e)}`); }
+        }
+        processed += 1;
+      }
+    } catch (e: any) {
+      errors.push(`findMessages global: ${String(e?.message || e)}`);
+    }
+  }
+
+  return {
+    chats: processed,
+    messages_found: messagesFound,
+    messages_imported: imported,
+    messages_skipped: skipped,
+    groups_skipped: groupJids.size,
+    errors: errors.slice(0, 20),
+  };
 }

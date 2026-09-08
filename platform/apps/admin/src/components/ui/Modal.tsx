@@ -28,10 +28,10 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
 
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div
         className={cn(
-          'bg-bg-1 border border-border rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.6)] max-h-[88vh] overflow-y-auto w-[92%] p-7',
+          'bg-bg-1 border border-border rounded-2xl shadow-[0_24px_60px_rgba(16,24,40,0.16)] max-h-[88vh] overflow-y-auto w-[92%] p-7',
           sizes[size],
         )}
         onClick={e => e.stopPropagation()}

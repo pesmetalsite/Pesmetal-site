@@ -148,10 +148,13 @@ export const AutomationGraphSchema = z.object({
 export const CreateAutomationSchema = z.object({
   name: z.string().min(2),
   description: z.string().optional(),
-  trigger: z.enum(['new_contact', 'message_received', 'keyword', 'lead_created']),
+  trigger: z.enum(['new_contact', 'message_received', 'keyword', 'lead_created']).optional(),
   keyword: z.string().optional(),
   status: z.enum(['draft', 'active', 'inactive', 'archived']).optional(),
-  graph: AutomationGraphSchema,
+  graph: AutomationGraphSchema.optional().or(z.record(z.any())),
+  initial_message: z.string().optional(),
+  options: z.any().optional(),
+  invalid_message: z.string().optional(),
 });
 
 // === Public (site) ===
