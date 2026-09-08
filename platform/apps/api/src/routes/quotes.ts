@@ -87,21 +87,21 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       const companyCnpj = company.company_cnpj || '39.350.593.0001/51';
 
       // ===== HEADER: empresa (bloco esquerdo) + nº/data (bloco direito) =====
-      doc.font('Helvetica-Bold').fontSize(22).fillColor('#1a9e5a').text(companyName.toUpperCase(), 45, 45);
-      doc.font('Helvetica').fontSize(8.5).fillColor('#5c6670')
-        .text(`CNPJ: ${companyCnpj}`, 45, 76, { width: 260 })
-        .text(`Contato: ${companyPhone}`, 45, 88, { width: 260 })
-        .text(companyAddress, 45, 100, { width: 260 })
-        .text(`E-mail: ${companyEmail}`, 45, 112, { width: 260 })
-        .text(`Web: ${companyWebsite}`, 45, 124, { width: 260 });
+      doc.font('Helvetica-Bold').fontSize(22).fillColor('#1a9e5a').text(companyName.toUpperCase(), 45, 40);
+      doc.font('Helvetica').fontSize(8).fillColor('#5c6670')
+        .text(`CNPJ: ${companyCnpj}`, 45, 70, { width: 260 })
+        .text(`Contato: ${companyPhone}`, 45, 81, { width: 260 })
+        .text(companyAddress, 45, 92, { width: 260 })
+        .text(`E-mail: ${companyEmail}`, 45, 103, { width: 260 })
+        .text(`Web: ${companyWebsite}`, 45, 114, { width: 260 });
 
-      doc.fontSize(20).fillColor('#1f2328').text('ORÇAMENTO', 315, 45, { align: 'right', width: 240 });
+      doc.fontSize(20).fillColor('#1f2328').text('ORÇAMENTO', 315, 40, { align: 'right', width: 240 });
       doc.fontSize(10).fillColor('#5c6670')
-        .text(`Nº ${quote.number || ''}`, 315, 78, { align: 'right', width: 240 })
-        .text(`Emitido em: ${fmtDate(quote.created_at)}`, 315, 92, { align: 'right', width: 240 })
-        .text(`Válido até: ${quote.valid_until ? fmtDate(quote.valid_until) : fmtDate(new Date(Date.now() + 15 * 86400000).toISOString())}`, 315, 106, { align: 'right', width: 240 });
+        .text(`Nº ${quote.number || ''}`, 315, 72, { align: 'right', width: 240 })
+        .text(`Emitido em: ${fmtDate(quote.created_at)}`, 315, 86, { align: 'right', width: 240 })
+        .text(`Válido até: ${quote.valid_until ? fmtDate(quote.valid_until) : fmtDate(new Date(Date.now() + 15 * 86400000).toISOString())}`, 315, 100, { align: 'right', width: 240 });
 
-      doc.moveTo(45, 142).lineTo(555, 142).strokeColor('#e5e8eb').lineWidth(1).stroke();
+      doc.moveTo(45, 132).lineTo(555, 132).strokeColor('#e5e8eb').lineWidth(1).stroke();
 
       // ===== CLIENTE (modelo real) =====
       const customerName = quote.contact_custom_name || quote.contact_name || quote.lead_name || '';
@@ -115,29 +115,35 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       const customerState = quote.address_state || '';
       const customerZip = quote.address_zip || '';
 
-      doc.moveDown(2.2);
+      doc.moveDown(1.6);
       doc.font('Helvetica-Bold').fontSize(12).fillColor('#1f2328').text('CLIENTE');
-      doc.moveDown(0.6);
+      doc.moveDown(0.3);
 
-      const clientRows: Array<[string, string]> = [
+      // 2 colunas × 5 linhas (modelo real economiza espaço vertical)
+      const leftCol: Array<[string, string]> = [
         ['NOME', customerName],
-        ['TELEFONE', customerPhone],
         ['EMAIL', customerEmail],
-        ['CPF/CNPJ', customerDoc],
         ['RG/IE', customerStateReg],
-        ['ENDEREÇO', customerLine],
         ['CIDADE', customerCity],
-        ['BAIRRO', customerNeighborhood],
         ['ESTADO', customerState],
+      ];
+      const rightCol: Array<[string, string]> = [
+        ['TELEFONE', customerPhone],
+        ['CPF/CNPJ', customerDoc],
+        ['ENDEREÇO', customerLine],
+        ['BAIRRO', customerNeighborhood],
         ['CEP', customerZip],
       ];
-
-      clientRows.forEach(([label, value]) => {
-        const rowY = doc.y;
-        doc.font('Helvetica-Bold').fontSize(9).fillColor('#5c6670').text(label, 45, rowY, { width: 110 });
-        doc.font('Helvetica').fontSize(9).fillColor('#1f2328').text(value || '—', 160, rowY, { width: 380 });
-        doc.y = rowY + 14;
-      });
+      for (let i = 0; i < 5; i++) {
+        const y = doc.y;
+        const [l1, v1] = leftCol[i];
+        const [l2, v2] = rightCol[i];
+        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#5c6670').text(l1, 45, y, { width: 85 });
+        doc.font('Helvetica').fontSize(8.5).fillColor('#1f2328').text(v1 || '—', 132, y, { width: 145 });
+        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#5c6670').text(l2, 305, y, { width: 85 });
+        doc.font('Helvetica').fontSize(8.5).fillColor('#1f2328').text(v2 || '—', 392, y, { width: 160 });
+        doc.y = y + 13;
+      }
 
       doc.moveTo(45, doc.y).lineTo(555, doc.y).strokeColor('#e5e8eb').stroke();
 
@@ -149,9 +155,9 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       }
 
       // ===== ORÇAMENTO: tabela de itens (modelo real) =====
-      doc.moveDown(1.6);
+      doc.moveDown(1.1);
       doc.font('Helvetica-Bold').fontSize(12).fillColor('#1f2328').text('ORÇAMENTO');
-      doc.moveDown(0.6);
+      doc.moveDown(0.4);
 
       let computedTotal = 0;
       const tableTop = doc.y;
@@ -169,21 +175,21 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
         const unit = Number(item.unit_price ?? item.price ?? 0);
         const subtotal = qty * unit;
         computedTotal += subtotal;
-        const rowY = doc.y + 6;
+        const rowY = doc.y + 5;
         doc.text(String(idx + 1), 45, rowY, { width: 40 })
           .text(String(item.description ?? '-'), 90, rowY, { width: 220 })
           .text(String(qty), 315, rowY, { width: 45, align: 'center' })
           .text(String(item.unit ?? ''), 365, rowY, { width: 35, align: 'center' })
           .text(`R$ ${subtotal.toFixed(2)}`, 405, rowY, { width: 150, align: 'right' });
-        doc.y = rowY + 16;
+        doc.y = rowY + 14;
       });
 
-      // linhas vazias para preencher até 10 itens
-      const emptyRows = Math.max(0, 10 - items.length);
+      // linhas vazias para preencher até 8 itens
+      const emptyRows = Math.max(0, 8 - items.length);
       for (let i = 0; i < emptyRows; i++) {
-        const rowY = doc.y + 6;
+        const rowY = doc.y + 5;
         doc.text(String(items.length + i + 1), 45, rowY, { width: 40 });
-        doc.y = rowY + 16;
+        doc.y = rowY + 14;
       }
 
       doc.moveTo(45, doc.y).lineTo(555, doc.y).strokeColor('#1a9e5a').lineWidth(1).stroke();
@@ -192,31 +198,31 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       const total = Number(quote.amount) || computedTotal;
       const subtotal = computedTotal;
       const acrescimo = Math.max(0, total - subtotal);
-      doc.moveDown(1);
-      doc.font('Helvetica').fontSize(10).fillColor('#1f2328');
+      doc.moveDown(0.7);
+      doc.font('Helvetica').fontSize(9.5).fillColor('#1f2328');
       doc.text('SUBTOTAL:', 405, doc.y, { width: 90, align: 'right' });
-      doc.font('Helvetica-Bold').text(`R$ ${subtotal.toFixed(2)}`, 500, doc.y - 13, { width: 55, align: 'right' });
-      doc.moveDown(0.6);
-      doc.font('Helvetica').fontSize(10).fillColor('#1f2328');
+      doc.font('Helvetica-Bold').text(`R$ ${subtotal.toFixed(2)}`, 500, doc.y - 12, { width: 55, align: 'right' });
+      doc.moveDown(0.5);
+      doc.font('Helvetica').fontSize(9.5).fillColor('#1f2328');
       doc.text('ACRÉSCIMO:', 405, doc.y, { width: 90, align: 'right' });
-      doc.font('Helvetica-Bold').text(`R$ ${acrescimo.toFixed(2)}`, 500, doc.y - 13, { width: 55, align: 'right' });
-      doc.moveDown(0.6);
-      doc.font('Helvetica').fontSize(10).fillColor('#1a9e5a');
+      doc.font('Helvetica-Bold').text(`R$ ${acrescimo.toFixed(2)}`, 500, doc.y - 12, { width: 55, align: 'right' });
+      doc.moveDown(0.5);
+      doc.font('Helvetica').fontSize(9.5).fillColor('#1a9e5a');
       doc.text('TOTAL:', 405, doc.y, { width: 90, align: 'right' });
       doc.font('Helvetica-Bold').fontSize(12).fillColor('#1a9e5a').text(`R$ ${total.toFixed(2)}`, 500, doc.y - 13, { width: 55, align: 'right' });
 
       // ===== CONDIÇÕES (FORMA DE PG / OBS / PRAZO / FRETE) =====
-      doc.moveDown(2);
-      doc.font('Helvetica-Bold').fontSize(10).fillColor('#1f2328').text('FORMA DE PG: A VISTA / NF / BOLETO (A COMBINAR)');
-      doc.font('Helvetica').fontSize(10).fillColor('#3d434a');
+      doc.moveDown(1.5);
+      doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text('FORMA DE PG: A VISTA / NF / BOLETO (A COMBINAR)');
+      doc.font('Helvetica').fontSize(9.5).fillColor('#3d434a');
       doc.text(`OBS: ${quote.notes || ''}`);
       doc.moveDown(0.4);
-      doc.font('Helvetica-Bold').fontSize(10).fillColor('#1f2328').text('PRAZO: 7 DIAS . FRETE:');
+      doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text('PRAZO: 7 DIAS . FRETE:');
 
       // ===== RODAPÉ =====
-      doc.moveDown(2.5);
+      doc.moveDown(2);
       doc.moveTo(45, doc.y).lineTo(555, doc.y).strokeColor('#e5e8eb').stroke();
-      doc.moveDown(0.5);
+      doc.moveDown(0.4);
       doc.font('Helvetica-Bold').fontSize(10).fillColor('#1a9e5a').text('PES METAL', { align: 'center' });
       doc.font('Helvetica').fontSize(8).fillColor('#9aa3a1')
         .text('Caldeiraria · Soldagem · Usinagem', { align: 'center' })
