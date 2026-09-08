@@ -21,6 +21,7 @@ export const notificationsRouter = asyncHandler(async (req, res, url) => {
     const notifications = await listNotifications(user.id, {
       all: q.all === '1' || q.all === 'true',
       limit: q.limit ? parseInt(q.limit, 10) : 50,
+      includeGlobal: user.role === 'admin' || user.role === 'gestor',
     });
     return json(res, 200, { notifications });
   }

@@ -23,7 +23,7 @@ export const AutomationRepository = {
     return (await q(`SELECT * FROM automations ORDER BY updated_at DESC`)) as AutomationRow[];
   },
   async listActive(): Promise<AutomationRow[]> {
-    return (await q(`SELECT * FROM automations WHERE status = 'active'`)) as AutomationRow[];
+    return (await q(`SELECT * FROM automations WHERE status = 'active' ORDER BY created_at ASC, id ASC`)) as AutomationRow[];
   },
   async findById(id: string): Promise<AutomationRow | undefined> {
     return (await q1(`SELECT * FROM automations WHERE id = $1`, [id])) as AutomationRow | undefined;

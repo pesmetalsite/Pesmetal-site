@@ -58,8 +58,14 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
     let body: any = {};
     try { body = await readBody(req); } catch { body = {}; }
     const instanceName = body?.instance_name || body?.instanceName || undefined;
-    const result = await syncConversations(instanceName);
-    return json(res, 200, { ok: true, ...result });
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Sync excedeu o tempo limite (60s)')), SYNC_TIMEOUT_MS));
+    try {
+      const result = await Promise.race([syncConversations(instanceName), timeoutPromise]);
+      return json(res, 200, { ok: true, ...result });
+    } catch (err: any) {
+      return json(res, 504, { error: 'Falha ao sincronizar', code: 'sync_timeout', detail: String(err?.message || err) });
+    }
   }
 
   // /whatsapp/conversations/:id/messages
@@ -119,6 +125,8 @@ function formatNumber(phone: string) {
 
 // === Sync de conversas (mínimo 50 chats) ===
 const SYNC_TARGET = 50;
+const SYNC_MSGS_PER_CHAT = 200;
+const SYNC_TIMEOUT_MS = 60000;
 
 function extractMessageRecords(raw: any): any[] {
   if (Array.isArray(raw)) return raw;
@@ -187,8 +195,8 @@ async function syncConversations(instanceName?: string) {
     seenJids.add(remoteJid);
     if (remoteJid.endsWith('@g.us')) { groupJids.add(remoteJid); return false; }
     try {
-      const raw = await Evolution.findMessages({ number: remoteJid, limit: 10000, instanceName });
-      const records = extractMessageRecords(raw);
+      const raw = await Evolution.findMessages({ number: remoteJid, limit: SYNC_MSGS_PER_CHAT, instanceName });
+      const records = extractMessageRecords(raw).slice(0, SYNC_MSGS_PER_CHAT);
       messagesFound += records.length;
       for (const item of records) {
         try { await importMessage(item); } catch (e: any) { errors.push(`${remoteJid}: ${String(e?.message || e)}`); }
@@ -219,8 +227,8 @@ async function syncConversations(instanceName?: string) {
   // 2) Fallback: findMessages global agrupado por chat quando findChats não rendeu 50
   if (processed < SYNC_TARGET) {
     try {
-      const rawAll = await Evolution.findMessages({ limit: 10000, instanceName });
-      const records = extractMessageRecords(rawAll);
+      const rawAll = await Evolution.findMessages({ limit: 5000, instanceName });
+      const records = extractMessageRecords(rawAll).slice(0, 5000);
       messagesFound += records.length;
       const byJid = new Map<string, any[]>();
       for (const r of records) {

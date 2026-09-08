@@ -71,20 +71,21 @@ export async function createNotification(input: CreateNotificationInput): Promis
   return id;
 }
 
-/** Lista notificações do usuário (não lidas primeiro). */
-export async function listNotifications(userId: string, opts: { all?: boolean; limit?: number } = {}): Promise<NotificationRow[]> {
+/** Lista notificações do usuário (não lidas primeiro). Globais só para admin/gestor. */
+export async function listNotifications(userId: string, opts: { all?: boolean; limit?: number; includeGlobal?: boolean } = {}): Promise<NotificationRow[]> {
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
+  const scope = opts.includeGlobal ? `user_id = $1 OR user_id IS NULL` : `user_id = $1`;
   if (opts.all) {
     return (await q(`
       SELECT * FROM notifications
-      WHERE user_id = $1 OR user_id IS NULL
+      WHERE ${scope}
       ORDER BY read ASC, created_at DESC
       LIMIT $2
     `, [userId, limit])) as NotificationRow[];
   }
   return (await q(`
     SELECT * FROM notifications
-    WHERE (user_id = $1 OR user_id IS NULL) AND read = 0
+    WHERE (${scope}) AND read = 0
     ORDER BY created_at DESC
     LIMIT $2
   `, [userId, limit])) as NotificationRow[];

@@ -44,7 +44,7 @@ Adicione em Render Dashboard → Environment:
 
 ```
 PORT=4000
-JWT_SECRET=pesmetal-super-secret-key-change-in-production-2026
+JWT_SECRET=<gere um secret forte e não versionar>
 ADMIN_EMAIL=admin@pesmetal.com.br
 ADMIN_PASSWORD=SuaSenhaForte123!
 ```

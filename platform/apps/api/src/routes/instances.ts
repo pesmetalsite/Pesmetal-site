@@ -125,17 +125,13 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
     const inst = (await q1(`SELECT * FROM whatsapp_instances WHERE id = $1 AND active = 1`, [instId])) as any;
     if (!inst) throw ApiError.notFound('Instancia');
 
-    const baseUrl = inst.evolution_api_url || process.env.EVOLUTION_API_URL;
+const baseUrl = inst.evolution_api_url || process.env.EVOLUTION_API_URL;
     const apiKey = inst.evolution_api_key || process.env.EVOLUTION_API_KEY;
     if (!baseUrl || !apiKey) {
       return json(res, 502, { error: 'Evolution API nao configurada para esta instancia' });
     }
 
-    const origUrl = process.env.EVOLUTION_API_URL;
-    const origKey = process.env.EVOLUTION_API_KEY;
-    process.env.EVOLUTION_API_URL = baseUrl;
-    process.env.EVOLUTION_API_KEY = apiKey;
-    try {
+    {
       const body = await readBody(req);
 
       // Se QR foi colado, conecta diretamente
@@ -176,9 +172,6 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
           [qr, expires, instId]);
       }
       return json(res, 200, { qr, pairingCode: resp?.pairingCode || resp?.code || null, status: qr ? 'connecting' : 'waiting', state });
-    } finally {
-      process.env.EVOLUTION_API_URL = origUrl;
-      process.env.EVOLUTION_API_KEY = origKey;
     }
   }
 
@@ -189,27 +182,24 @@ export const instancesRouter = asyncHandler(async (req, res, url) => {
     const inst = (await q1(`SELECT * FROM whatsapp_instances WHERE id = $1 AND active = 1`, [instId])) as any;
     if (!inst) throw ApiError.notFound('Instancia');
 
-    const baseUrl = inst.evolution_api_url || process.env.EVOLUTION_API_URL;
+const baseUrl = inst.evolution_api_url || process.env.EVOLUTION_API_URL;
     const apiKey = inst.evolution_api_key || process.env.EVOLUTION_API_KEY;
     if (!baseUrl || !apiKey) {
       return json(res, 502, { error: 'Evolution API nao configurada' });
     }
 
-    const origUrl = process.env.EVOLUTION_API_URL;
-    const origKey = process.env.EVOLUTION_API_KEY;
-    process.env.EVOLUTION_API_URL = baseUrl;
-    process.env.EVOLUTION_API_KEY = apiKey;
-    try {
-      const { Evolution } = await import('../services/evolution.js');
-      const apiBase = process.env.API_BASE_URL || `https://lucid-contentment-production-17bc.up.railway.app`;
-      const webhookUrl = `${apiBase}/webhook/evolution`;
-      await Evolution.setWebhook({ url: webhookUrl, events: ['messages.upsert', 'connection.update'], instanceName: inst.instance_name });
-      await qe(`UPDATE whatsapp_instances SET webhook_url = $1, updated_at = now() WHERE id = $2`, [webhookUrl, instId]);
-      return json(res, 200, { ok: true, webhookUrl });
-    } finally {
-      process.env.EVOLUTION_API_URL = origUrl;
-      process.env.EVOLUTION_API_KEY = origKey;
+    const apiBase = process.env.API_BASE_URL || `https://lucid-contentment-production-17bc.up.railway.app`;
+    const webhookUrl = `${apiBase}/webhook/evolution`;
+    const resp = await fetch(`${baseUrl}/webhook/set/${inst.instance_name}`, {
+      method: 'POST',
+      headers: { apikey: apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: webhookUrl, webhook_by_events: false, events: ['messages.upsert', 'connection.update'], enabled: true }),
+    });
+    if (!resp.ok) {
+      return json(res, 502, { error: `Evolution API ${resp.status}`, detail: (await resp.text()).slice(0, 300) });
     }
+    await qe(`UPDATE whatsapp_instances SET webhook_url = $1, updated_at = now() WHERE id = $2`, [webhookUrl, instId]);
+    return json(res, 200, { ok: true, webhookUrl });
   }
 
   throw ApiError.notFound('Endpoint instances');

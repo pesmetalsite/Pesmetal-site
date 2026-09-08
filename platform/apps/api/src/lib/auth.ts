@@ -33,7 +33,7 @@ export async function ensureAdminUser() {
       INSERT INTO users (id, email, name, password_hash, role)
       VALUES ($1, $2, $3, $4, 'admin')
     `, [nanoid(), email, 'Administrador', hash]);
-    console.log(`✓ Usuário admin criado: ${email} / ${password}`);
+    console.log(`✓ Usuário admin criado: ${email}`);
   }
 }
 

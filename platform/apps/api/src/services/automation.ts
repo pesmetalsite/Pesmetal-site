@@ -405,7 +405,7 @@ async function handleNumericInput(conv: any, automation: any, message: string, i
     }
   }
 
-  await ConversationRepository.update(conv.id, { current_node: 'end', automation_status: 'waiting_input' });
+  await ConversationRepository.update(conv.id, { current_node: 'menu', automation_status: 'waiting_input' });
 }
 
 // === Engine público ===

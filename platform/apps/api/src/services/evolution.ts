@@ -21,21 +21,29 @@ function getApiKey(): string {
 interface SendTextInput { number: string; text: string; delay?: number; instanceName?: string; }
 interface SendMediaInput { number: string; mediaType: 'image' | 'document' | 'video' | 'audio'; media: string; fileName?: string; caption?: string; instanceName?: string; }
 
-async function call(path: string, method: string, body?: any) {
+async function call(path: string, method: string, body?: any, timeoutMs = 25000) {
   const baseUrl = getBaseUrl();
   const apiKey = getApiKey();
   if (!baseUrl || !apiKey) {
     throw new Error('Evolution API não configurada (EVOLUTION_API_URL ou EVOLUTION_API_KEY ausente).');
   }
   const url = `${baseUrl}${path}`;
-  const res = await fetch(url, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: apiKey,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: apiKey,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Evolution API ${res.status}: ${text}`);

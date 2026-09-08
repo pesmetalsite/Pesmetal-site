@@ -79,11 +79,11 @@ Já configuradas no serviço `lucid-contentment`:
 
 ```
 EVOLUTION_API_URL=https://evolution-api-production-dc3b5.up.railway.app
-EVOLUTION_API_KEY=d024ea7bb4eecab457678225503d1b9cef60373d741c10afaeed4ffc59a5fa75
+EVOLUTION_API_KEY=<definido no Railway, não versionar>
 EVOLUTION_INSTANCE=pesmetal-main
 JWT_SECRET=<gerado>
 ADMIN_EMAIL=admin@pesmetal.local
-ADMIN_PASSWORD=pesmetal123
+ADMIN_PASSWORD=<definido no Railway, não versionar>
 ```
 
 Para adicionar pelo CLI:

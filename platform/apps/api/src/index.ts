@@ -100,5 +100,4 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   logger.info(`🔥 PESMETAL API v2.0 rodando em http://localhost:${PORT}`);
-  logger.info(`Admin: ${process.env.ADMIN_EMAIL || 'admin@pesmetal.local'} / ${process.env.ADMIN_PASSWORD || 'pesmetal123'}`);
 });
