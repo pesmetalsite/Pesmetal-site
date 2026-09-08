@@ -23,6 +23,8 @@ interface Contact {
   address_city?: string | null
   address_state?: string | null
   address_zip?: string | null
+  address_neighborhood?: string | null
+  state_registration?: string | null
   conversation_id?: string | null
   quote_count?: number
   created_at?: string
@@ -41,6 +43,7 @@ export default function ClientesPage() {
   const [form, setForm] = useState({
     name: '', phone: '', email: '', company: '', document: '',
     address_line: '', address_city: '', address_state: '', address_zip: '',
+    address_neighborhood: '', state_registration: '',
   })
 
   useEffect(() => {
@@ -63,7 +66,7 @@ export default function ClientesPage() {
 
   const openCreate = () => {
     setEditingContact(null)
-    setForm({ name: '', phone: '', email: '', company: '', document: '', address_line: '', address_city: '', address_state: '', address_zip: '' })
+    setForm({ name: '', phone: '', email: '', company: '', document: '', address_line: '', address_city: '', address_state: '', address_zip: '', address_neighborhood: '', state_registration: '' })
     setEditorOpen(true)
   }
 
@@ -74,6 +77,7 @@ export default function ClientesPage() {
       company: c.company || '', document: c.document || '',
       address_line: c.address_line || '', address_city: c.address_city || '',
       address_state: c.address_state || '', address_zip: c.address_zip || '',
+      address_neighborhood: c.address_neighborhood || '', state_registration: c.state_registration || '',
     })
     setEditorOpen(true)
   }
@@ -173,7 +177,7 @@ export default function ClientesPage() {
                 {c.email && <div className="text-xs text-text-dim truncate">{c.email}</div>}
                 {(c.address_line || c.address_city) && (
                   <div className="text-xs text-text-dim truncate">
-                    {[c.address_line, c.address_city, c.address_state, c.address_zip].filter(Boolean).join(', ')}
+                    {[c.address_line, c.address_neighborhood, c.address_city, c.address_state, c.address_zip].filter(Boolean).join(', ')}
                   </div>
                 )}
 
@@ -210,7 +214,9 @@ export default function ClientesPage() {
           <Input label="E-mail" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="cliente@email.com" />
           <Input label="Empresa" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Razão social da empresa" />
           <Input label="CPF / CNPJ" value={form.document} onChange={(e) => setForm({ ...form, document: e.target.value })} placeholder="000.000.000-00" />
-          <Input label="Endereço" value={form.address_line} onChange={(e) => setForm({ ...form, address_line: e.target.value })} placeholder="Rua, número, complemento, bairro" />
+          <Input label="RG / IE" value={form.state_registration} onChange={(e) => setForm({ ...form, state_registration: e.target.value })} placeholder="RG / Inscrição estadual" />
+          <Input label="Endereço" value={form.address_line} onChange={(e) => setForm({ ...form, address_line: e.target.value })} placeholder="Rua, número, complemento" />
+          <Input label="Bairro" value={form.address_neighborhood} onChange={(e) => setForm({ ...form, address_neighborhood: e.target.value })} placeholder="Bairro" />
           <Input label="Cidade" value={form.address_city} onChange={(e) => setForm({ ...form, address_city: e.target.value })} />
           <div className="grid grid-cols-2 gap-4">
             <Input label="UF" value={form.address_state} onChange={(e) => setForm({ ...form, address_state: e.target.value })} placeholder="SP" />

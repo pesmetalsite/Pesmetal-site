@@ -46,6 +46,8 @@ export const contactsRouter = asyncHandler(async (req, res, url) => {
       address_city: body?.address_city ? String(body.address_city).trim() : null,
       address_state: body?.address_state ? String(body.address_state).trim() : null,
       address_zip: body?.address_zip ? String(body.address_zip).trim() : null,
+      address_neighborhood: body?.address_neighborhood ? String(body.address_neighborhood).trim() : null,
+      state_registration: body?.state_registration ? String(body.state_registration).trim() : null,
     });
     logger.info('contact created', { id, user_id: user.id });
     return json(res, 201, { id, existing: false });
@@ -65,7 +67,7 @@ export const contactsRouter = asyncHandler(async (req, res, url) => {
     const contact = await ContactRepository.findById(idMatch[1]);
     if (!contact) throw ApiError.notFound('Cliente');
     const fields: any = {};
-    for (const k of ['name', 'custom_name', 'email', 'company', 'document', 'address_line', 'address_city', 'address_state', 'address_zip']) {
+    for (const k of ['name', 'custom_name', 'email', 'company', 'document', 'address_line', 'address_city', 'address_state', 'address_zip', 'address_neighborhood', 'state_registration']) {
       if (k in body) fields[k] = body[k] == null ? null : String(body[k]).trim() || null;
     }
     if ('phone' in body) {

@@ -127,7 +127,8 @@ export const QuoteRepository = {
   async findById(id: string): Promise<any> {
     return (await q1(`SELECT q.*, c.name as contact_name, c.phone as contact_phone, c.custom_name, c.document as contact_document,
                c.email as contact_email, c.company as contact_company,
-               c.address_line, c.address_city, c.address_state, c.address_zip,
+               c.address_line, c.address_neighborhood, c.address_city, c.address_state, c.address_zip,
+               c.state_registration,
                l.name as lead_name, u.name as user_name
                FROM quotes q
                LEFT JOIN contacts c ON c.id = q.contact_id

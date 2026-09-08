@@ -32,6 +32,8 @@ interface Contact {
   address_city?: string | null
   address_state?: string | null
   address_zip?: string | null
+  address_neighborhood?: string | null
+  state_registration?: string | null
 }
 
 interface Quote {
@@ -51,6 +53,12 @@ interface Quote {
   contact_company?: string
   contact_document?: string
   conversation_id?: string
+  address_line?: string | null
+  address_neighborhood?: string | null
+  address_city?: string | null
+  address_state?: string | null
+  address_zip?: string | null
+  state_registration?: string | null
   items?: QuoteItem[]
   notes?: string
 }
@@ -146,6 +154,7 @@ export default function OrcamentosPage() {
   const [newContact, setNewContact] = useState({
     name: '', phone: '', email: '', company: '', document: '',
     address_line: '', address_city: '', address_state: '', address_zip: '',
+    address_neighborhood: '', state_registration: '',
   })
   const [creatingContact, setCreatingContact] = useState(false)
 
@@ -227,6 +236,9 @@ export default function OrcamentosPage() {
         ...nc,
         name: q.contact_name || '', phone: q.contact_phone || '',
         email: q.contact_email || '', company: q.contact_company || '', document: q.contact_document || '',
+        address_line: q.address_line || '', address_city: q.address_city || '',
+        address_state: q.address_state || '', address_zip: q.address_zip || '',
+        address_neighborhood: q.address_neighborhood || '', state_registration: q.state_registration || '',
       }))
     }
     setEditorOpen(true)
@@ -322,6 +334,7 @@ export default function OrcamentosPage() {
       email: c.email || '', company: c.company || '', document: c.document || '',
       address_line: c.address_line || '', address_city: c.address_city || '',
       address_state: c.address_state || '', address_zip: c.address_zip || '',
+      address_neighborhood: c.address_neighborhood || '', state_registration: c.state_registration || '',
     })
     setContactPickerOpen(false)
     setNewContactMode(false)
@@ -607,7 +620,9 @@ export default function OrcamentosPage() {
               <Input label="E-mail" value={newContact.email} onChange={(e) => setNewContact({ ...newContact, email: e.target.value })} placeholder="cliente@email.com" />
               <Input label="Empresa" value={newContact.company} onChange={(e) => setNewContact({ ...newContact, company: e.target.value })} />
               <Input label="CPF / CNPJ" value={newContact.document} onChange={(e) => setNewContact({ ...newContact, document: e.target.value })} placeholder="000.000.000-00" />
+              <Input label="RG / IE" value={newContact.state_registration} onChange={(e) => setNewContact({ ...newContact, state_registration: e.target.value })} />
               <Input label="Endereço" value={newContact.address_line} onChange={(e) => setNewContact({ ...newContact, address_line: e.target.value })} placeholder="Rua, número, complemento" />
+              <Input label="Bairro" value={newContact.address_neighborhood} onChange={(e) => setNewContact({ ...newContact, address_neighborhood: e.target.value })} placeholder="Bairro" />
               <Input label="Cidade" value={newContact.address_city} onChange={(e) => setNewContact({ ...newContact, address_city: e.target.value })} />
               <div className="grid grid-cols-2 gap-3">
                 <Input label="UF" value={newContact.address_state} onChange={(e) => setNewContact({ ...newContact, address_state: e.target.value })} placeholder="SP" />

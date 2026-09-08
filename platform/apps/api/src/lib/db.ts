@@ -90,11 +90,15 @@ export async function migrate(): Promise<void> {
     `ALTER TABLE leads ADD COLUMN IF NOT EXISTS address_city text`,
     `ALTER TABLE leads ADD COLUMN IF NOT EXISTS address_state text`,
     `ALTER TABLE leads ADD COLUMN IF NOT EXISTS address_zip text`,
+    `ALTER TABLE leads ADD COLUMN IF NOT EXISTS address_neighborhood text`,
+    `ALTER TABLE leads ADD COLUMN IF NOT EXISTS state_registration text`,
     `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS document text`,
     `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS address_line text`,
     `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS address_city text`,
     `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS address_state text`,
     `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS address_zip text`,
+    `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS address_neighborhood text`,
+    `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS state_registration text`,
   ];
   for (const sql of alters) {
     try {
@@ -149,13 +153,12 @@ export async function seedDefaults(): Promise<void> {
   `;
   const settingDefaults: Record<string, string> = {
     company_name: 'Pes Metal',
+    company_cnpj: '39.350.593.0001/51',
     company_phone: '(15) 99834-5539',
     company_whatsapp: '5515998345539',
-    company_email: 'contato@pesmetal.com.br',
-    company_address: 'Av. Jaziel de Azeredo Ribeiro, 365 · Jardim Antônio Cassillo · Votorantim-SP · CEP 18112-180',
-    company_city: 'Votorantim',
-    company_state: 'SP',
-    company_website: '',
+    company_email: 'caldeirariapes@gmail.com',
+    company_address: 'R. Jaziel Azeredo Ribeiro, 365 B3 - Votorantim/SP - 18112180',
+    company_website: 'pesmetalcaldeiraria.com.br',
     company_logo: '',
     company_business_hours: 'Segunda a Sexta, 08:00 às 18:00',
     company_experience_years: '30',

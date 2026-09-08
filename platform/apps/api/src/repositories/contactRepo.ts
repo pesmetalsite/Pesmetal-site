@@ -18,6 +18,8 @@ export interface ContactRow {
   address_city: string | null;
   address_state: string | null;
   address_zip: string | null;
+  address_neighborhood: string | null;
+  state_registration: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -50,15 +52,16 @@ export const ContactRepository = {
   },
   async insert(data: Partial<ContactRow> & Pick<ContactRow, 'phone'>): Promise<string> {
     const id = data.id || `ct_${crypto.randomUUID().slice(0, 16)}`;
-    await qe(`INSERT INTO contacts (id, phone, whatsapp_id, name, email, company, avatar, tags, document, address_line, address_city, address_state, address_zip)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+    await qe(`INSERT INTO contacts (id, phone, whatsapp_id, name, email, company, avatar, tags, document, address_line, address_city, address_state, address_zip, address_neighborhood, state_registration)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [id, data.phone, data.whatsapp_id ?? null, data.name ?? null, data.email ?? null,
         data.company ?? null, data.avatar ?? null, data.tags ?? null, data.document ?? null,
-        data.address_line ?? null, data.address_city ?? null, data.address_state ?? null, data.address_zip ?? null]);
+        data.address_line ?? null, data.address_city ?? null, data.address_state ?? null, data.address_zip ?? null,
+        data.address_neighborhood ?? null, data.state_registration ?? null]);
     return id;
   },
   async update(id: string, fields: Partial<ContactRow>): Promise<void> {
-    const allowed: (keyof ContactRow)[] = ['name', 'custom_name', 'email', 'company', 'avatar', 'tags', 'whatsapp_id', 'phone', 'document', 'address_line', 'address_city', 'address_state', 'address_zip'];
+    const allowed: (keyof ContactRow)[] = ['name', 'custom_name', 'email', 'company', 'avatar', 'tags', 'whatsapp_id', 'phone', 'document', 'address_line', 'address_city', 'address_state', 'address_zip', 'address_neighborhood', 'state_registration'];
     const sets: string[] = [];
     const params: any[] = [];
     for (const k of allowed) {

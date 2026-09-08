@@ -62,6 +62,13 @@ CREATE TABLE IF NOT EXISTS contacts (
     notes text,
     avatar text,
     custom_name text,
+    document text,
+    address_line text,
+    address_neighborhood text,
+    address_city text,
+    address_state text,
+    address_zip text,
+    state_registration text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -208,7 +215,7 @@ CREATE TABLE IF NOT EXISTS appointments (
 CREATE TABLE IF NOT EXISTS quotes (
     id text PRIMARY KEY,
     number text UNIQUE,
-    lead_id text NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+    lead_id text REFERENCES leads(id) ON DELETE CASCADE,
     user_id text REFERENCES users(id),
     title text NOT NULL,
     description text,
@@ -218,6 +225,11 @@ CREATE TABLE IF NOT EXISTS quotes (
     status text DEFAULT 'draft',
     notes text,
     items text,
+    contact_id text REFERENCES contacts(id) ON DELETE SET NULL,
+    conversation_id text,
+    retention_expires_at timestamptz NOT NULL DEFAULT (now() + interval '15 days'),
+    sent_at timestamptz,
+    sent_by text REFERENCES users(id),
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
