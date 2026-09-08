@@ -2,7 +2,7 @@
  * Webhook da Evolution API — refatorado com idempotência + anti-loop.
  */
 import { json, readBody } from '../lib/http.js';
-import { db } from '../lib/db.js';
+import { q1, qe } from '../lib/db.js';
 import { findOrCreateContactId, createLead, recordEvent } from '../services/crm.js';
 import { ConversationRepository, MessageRepository } from '../repositories/conversationRepo.js';
 import { startAutomation, processIncomingMessage } from '../services/automation.js';
@@ -16,8 +16,8 @@ function isBusinessHour(): boolean {
   return hour >= 8 && hour < 18;
 }
 
-function getSetting(key: string): string | null {
-  return (db.prepare(`SELECT value FROM company_settings WHERE key = ?`).get(key) as any)?.value ?? null;
+async function getSetting(key: string): Promise<string | null> {
+  return ((await q1(`SELECT value FROM company_settings WHERE key = $1`, [key])) as any)?.value ?? null;
 }
 
 export async function webhookHandler(req: any, res: any, url: URL) {
@@ -78,8 +78,7 @@ async function handleEvolutionEvent(event: any) {
   // Anti-loop: ignora mensagens enviadas por nós
   if (key?.fromMe) {
     if (key?.id) {
-      db.prepare(`UPDATE whatsapp_messages SET status = COALESCE(?, status) WHERE external_id = ?`)
-        .run(data?.status || 'sent', key.id);
+      await qe(`UPDATE whatsapp_messages SET status = COALESCE($1, status) WHERE external_id = $2`, [data?.status || 'sent', key.id]);
     }
     return;
   }
@@ -92,7 +91,7 @@ async function handleEvolutionEvent(event: any) {
   if (!phone) return;
 
   // Idempotência
-  if (messageId && MessageRepository.findByExternalId(messageId)) {
+  if (messageId && await MessageRepository.findByExternalId(messageId)) {
     logger.debug('duplicate webhook ignored', { messageId });
     return;
   }
@@ -102,25 +101,25 @@ async function handleEvolutionEvent(event: any) {
   const mediaUrl = msg?.imageMessage?.url || msg?.documentMessage?.url || msg?.videoMessage?.url || msg?.audioMessage?.url || null;
   const mime = msg?.imageMessage?.mimetype || msg?.documentMessage?.mimetype || msg?.videoMessage?.mimetype || msg?.audioMessage?.mimetype || null;
 
-  const contactId = findOrCreateContactId(phone, { name: pushName });
+  const contactId = await findOrCreateContactId(phone, { name: pushName });
 
-  let conv = ConversationRepository.findByContactId(contactId);
+  let conv = await ConversationRepository.findByContactId(contactId);
   if (!conv) {
-    const id = ConversationRepository.insert({ contact_id: contactId, status: 'active', automation_status: 'idle' });
-    conv = ConversationRepository.findById(id)!;
+    const id = await ConversationRepository.insert({ contact_id: contactId, status: 'active', automation_status: 'idle' });
+    conv = (await ConversationRepository.findById(id))!;
   }
 
   let leadId = conv.lead_id;
   if (!leadId) {
-    const { lead_id } = createLead({
+    const { lead_id } = await createLead({
       name: pushName || phone, phone, source: 'whatsapp', notes: 'Lead criado via WhatsApp',
     });
     leadId = lead_id;
-    ConversationRepository.update(conv.id, { lead_id });
-    recordEvent({ lead_id: leadId, type: 'whatsapp_started', description: 'Conversa WhatsApp iniciada' });
+    await ConversationRepository.update(conv.id, { lead_id });
+    await recordEvent({ lead_id: leadId, type: 'whatsapp_started', description: 'Conversa WhatsApp iniciada' });
   }
 
-  MessageRepository.insert({
+  await MessageRepository.insert({
     external_id: messageId || null,
     conversation_id: conv.id,
     direction: 'incoming',
@@ -131,14 +130,14 @@ async function handleEvolutionEvent(event: any) {
     status: 'received',
   });
 
-  ConversationRepository.update(conv.id, {
+  await ConversationRepository.update(conv.id, {
     last_message_at: new Date().toISOString(),
     unread_count: (conv.unread_count || 0) + 1,
   });
 
   if (conv.automation_status !== 'paused' && conv.status !== 'human') {
     if (conv.automation_status === 'idle') {
-      const offHoursMsg = !isBusinessHour() ? getSetting('automation_off_hours_message') : null;
+      const offHoursMsg = !isBusinessHour() ? await getSetting('automation_off_hours_message') : null;
       if (offHoursMsg) {
         const { Evolution } = await import('../services/evolution.js');
         try {

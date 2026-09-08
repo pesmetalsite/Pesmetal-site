@@ -2,7 +2,7 @@
  * Lead Repository — única camada que toca a tabela `leads`.
  * Recebe parâmetros, retorna objetos tipados. Zero regras de negócio aqui.
  */
-import { db } from '../lib/db.js';
+import { q, q1, qe } from '../lib/db.js';
 
 export type LeadStatus = 'active' | 'won' | 'lost' | 'archived';
 export type LeadPriority = 'low' | 'medium' | 'high' | 'urgent';
@@ -52,9 +52,9 @@ export interface LeadWithRelations extends LeadRow {
 }
 
 export const LeadRepository = {
-  insert(data: Partial<LeadRow> & Pick<LeadRow, 'name' | 'phone' | 'contact_id'>): string {
+  async insert(data: Partial<LeadRow> & Pick<LeadRow, 'name' | 'phone' | 'contact_id'>): Promise<string> {
     const id = data.id || crypto.randomUUID().replace(/-/g, '').slice(0, 21);
-    db.prepare(`
+    await qe(`
       INSERT INTO leads (
         id, contact_id, stage_id, service_id, assigned_user_id,
         name, company, email, phone, interest, priority, estimated_value, status,
@@ -63,14 +63,14 @@ export const LeadRepository = {
         fbclid, gclid, tracking_session_id,
         description, quantity, deadline, notes
       ) VALUES (
-        ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?,
-        ?, ?, ?, ?
+        $1, $2, $3, $4, $5,
+        $6, $7, $8, $9, $10, $11, $12, $13,
+        $14, $15, $16, $17, $18,
+        $19, $20, $21, $22, $23, $24, $25,
+        $26, $27, $28,
+        $29, $30, $31, $32
       )
-    `).run(
+    `, [
       id, data.contact_id, data.stage_id ?? null, data.service_id ?? null, data.assigned_user_id ?? null,
       data.name, data.company ?? null, data.email ?? null, data.phone, data.interest ?? null,
       data.priority ?? 'medium', data.estimated_value ?? 0, data.status ?? 'active',
@@ -80,27 +80,27 @@ export const LeadRepository = {
       data.utm_content ?? null, data.utm_term ?? null,
       data.fbclid ?? null, data.gclid ?? null, data.tracking_session_id ?? null,
       data.description ?? null, data.quantity ?? null, data.deadline ?? null, data.notes ?? null,
-    );
+    ]);
     return id;
   },
 
-  findActiveByContactId(contactId: string): LeadRow | undefined {
-    return db.prepare(`SELECT * FROM leads WHERE contact_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT 1`).get(contactId) as LeadRow | undefined;
+  async findActiveByContactId(contactId: string): Promise<LeadRow | undefined> {
+    return (await q1(`SELECT * FROM leads WHERE contact_id = $1 AND status = 'active' ORDER BY created_at DESC LIMIT 1`, [contactId])) as LeadRow | undefined;
   },
 
-  findById(id: string): LeadRow | undefined {
-    return db.prepare(`SELECT * FROM leads WHERE id = ?`).get(id) as LeadRow | undefined;
+  async findById(id: string): Promise<LeadRow | undefined> {
+    return (await q1(`SELECT * FROM leads WHERE id = $1`, [id])) as LeadRow | undefined;
   },
 
-  findFull(id: string): any {
-    return db.prepare(`
+  async findFull(id: string): Promise<any> {
+    return (await q1(`
       SELECT l.*, c.phone as contact_phone, c.whatsapp_id, c.tags
       FROM leads l JOIN contacts c ON c.id = l.contact_id
-      WHERE l.id = ?
-    `).get(id);
+      WHERE l.id = $1
+    `, [id]));
   },
 
-  list(filter: {
+  async list(filter: {
     stage_id?: string;
     service_id?: string;
     source?: string;
@@ -109,22 +109,22 @@ export const LeadRepository = {
     search?: string;
     date_from?: string;
     date_to?: string;
-  } = {}): LeadWithRelations[] {
+  } = {}): Promise<LeadWithRelations[]> {
     const where: string[] = ['1=1'];
     const params: any[] = [];
-    if (filter.stage_id) { where.push('l.stage_id = ?'); params.push(filter.stage_id); }
-    if (filter.service_id) { where.push('l.service_id = ?'); params.push(filter.service_id); }
-    if (filter.source) { where.push('l.source = ?'); params.push(filter.source); }
-    if (filter.assigned_user_id) { where.push('l.assigned_user_id = ?'); params.push(filter.assigned_user_id); }
-    if (filter.status) { where.push('l.status = ?'); params.push(filter.status); }
+    if (filter.stage_id) { where.push(`l.stage_id = $${params.length + 1}`); params.push(filter.stage_id); }
+    if (filter.service_id) { where.push(`l.service_id = $${params.length + 1}`); params.push(filter.service_id); }
+    if (filter.source) { where.push(`l.source = $${params.length + 1}`); params.push(filter.source); }
+    if (filter.assigned_user_id) { where.push(`l.assigned_user_id = $${params.length + 1}`); params.push(filter.assigned_user_id); }
+    if (filter.status) { where.push(`l.status = $${params.length + 1}`); params.push(filter.status); }
     if (filter.search) {
-      where.push('(l.name LIKE ? OR l.phone LIKE ? OR l.company LIKE ? OR l.email LIKE ?)');
+      where.push(`(l.name LIKE $${params.length + 1} OR l.phone LIKE $${params.length + 2} OR l.company LIKE $${params.length + 3} OR l.email LIKE $${params.length + 4})`);
       const s = `%${filter.search}%`;
       params.push(s, s, s, s);
     }
-    if (filter.date_from) { where.push('l.created_at >= ?'); params.push(filter.date_from); }
-    if (filter.date_to) { where.push('l.created_at <= ?'); params.push(filter.date_to); }
-    return db.prepare(`
+    if (filter.date_from) { where.push(`l.created_at >= $${params.length + 1}`); params.push(filter.date_from); }
+    if (filter.date_to) { where.push(`l.created_at <= $${params.length + 1}`); params.push(filter.date_to); }
+    return (await q(`
       SELECT l.*, ps.name as stage_name, ps.color as stage_color,
              s.name as service_name, u.name as assigned_name
       FROM leads l
@@ -133,10 +133,10 @@ export const LeadRepository = {
       LEFT JOIN users u ON u.id = l.assigned_user_id
       WHERE ${where.join(' AND ')}
       ORDER BY l.created_at DESC
-    `).all(...params) as LeadWithRelations[];
+    `, params)) as LeadWithRelations[];
   },
 
-  updateFields(id: string, fields: Partial<LeadRow>): void {
+  async updateFields(id: string, fields: Partial<LeadRow>): Promise<void> {
     const allowed: (keyof LeadRow)[] = [
       'name', 'company', 'email', 'phone', 'interest', 'priority',
       'estimated_value', 'status', 'notes', 'description', 'quantity',
@@ -145,15 +145,15 @@ export const LeadRepository = {
     const sets: string[] = [];
     const params: any[] = [];
     for (const k of allowed) {
-      if (k in fields) { sets.push(`${k} = ?`); params.push((fields as any)[k]); }
+      if (k in fields) { sets.push(`${k} = $${params.length + 1}`); params.push((fields as any)[k]); }
     }
     if (!sets.length) return;
-    sets.push(`updated_at = datetime('now')`);
+    sets.push(`updated_at = now()`);
     params.push(id);
-    db.prepare(`UPDATE leads SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    await qe(`UPDATE leads SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
   },
 
-  delete(id: string): void {
-    db.prepare(`DELETE FROM leads WHERE id = ?`).run(id);
+  async delete(id: string): Promise<void> {
+    await qe(`DELETE FROM leads WHERE id = $1`, [id]);
   },
 };

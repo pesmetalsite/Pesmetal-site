@@ -68,3 +68,7 @@ instagram-consecom/
 
 .vercel
 .env*
+
+# Templates de ambiente (placeholders, sem segredos)
+!.env.example
+!**/.env.example

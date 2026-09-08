@@ -1,6 +1,6 @@
 import { json } from '../lib/http.js';
 import { authenticate } from '../lib/auth.js';
-import { db } from '../lib/db.js';
+import { q1, qe } from '../lib/db.js';
 import { nanoid } from 'nanoid';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -210,7 +210,7 @@ export async function uploadRouter(req: any, res: any, url: URL) {
       }
 
       // Verifica se o lead existe — evita FK error genérico e devolve 404 claro.
-      const lead = db.prepare(`SELECT id FROM leads WHERE id = ?`).get(leadId);
+      const lead = await q1(`SELECT id FROM leads WHERE id = $1`, [leadId]);
       if (!lead) {
         return json(res, 404, { error: 'lead_id não encontrado' });
       }
@@ -233,24 +233,26 @@ export async function uploadRouter(req: any, res: any, url: URL) {
       const detectedMime = detectMime(filePart.data, filePart.mime);
 
       const id = nanoid();
-      db.prepare(
+      await qe(
         `INSERT INTO lead_files (id, lead_id, filename, mime, size, path, uploaded_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).run(
-        id,
-        leadId,
-        originalName,
-        detectedMime,
-        filePart.data.length,
-        resolved,
-        user.id
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          id,
+          leadId,
+          originalName,
+          detectedMime,
+          filePart.data.length,
+          resolved,
+          user.id
+        ]
       );
 
       try {
-        db.prepare(
+        await qe(
           `INSERT INTO lead_events (id, lead_id, user_id, type, description)
-           VALUES (?, ?, ?, 'file_received', ?)`
-        ).run(nanoid(), leadId, user.id, `Arquivo recebido: ${originalName}`);
+           VALUES ($1, $2, $3, 'file_received', $4)`,
+          [nanoid(), leadId, user.id, `Arquivo recebido: ${originalName}`]
+        );
       } catch (evtErr) {
         // Loga mas não falha o upload — o arquivo já foi persistido.
         console.error('[upload] falha ao registrar evento:', evtErr);

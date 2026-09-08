@@ -39,7 +39,7 @@ export const automationsRouter = asyncHandler(async (req, res, url) => {
   const method = req.method;
 
   if (path === '/automations' && method === 'GET') {
-    const list = AutomationRepository.list();
+    const list = await AutomationRepository.list();
     return json(res, 200, { automations: list.map(a => ({
       id: a.id, name: a.name, description: a.description, trigger: a.trigger,
       status: a.status, updated_at: a.updated_at,
@@ -49,13 +49,13 @@ export const automationsRouter = asyncHandler(async (req, res, url) => {
   if (path === '/automations' && method === 'POST') {
     if (user.role === 'atendente') throw ApiError.forbidden();
     const body = parseBody(CreateAutomationSchema, await readBody(req));
-    const id = AutomationRepository.insert({ ...body, graph: JSON.stringify(body.graph) });
+    const id = await AutomationRepository.insert({ ...body, graph: JSON.stringify(body.graph) });
     return json(res, 201, { id });
   }
 
   const idMatch = path.match(/^\/automations\/([^\/]+)$/);
   if (idMatch && method === 'GET') {
-    const a = AutomationRepository.findById(idMatch[1]);
+    const a = await AutomationRepository.findById(idMatch[1]);
     if (!a) throw ApiError.notFound('Automação');
     return json(res, 200, { automation: a });
   }
@@ -73,18 +73,18 @@ export const automationsRouter = asyncHandler(async (req, res, url) => {
       if (Object.prototype.hasOwnProperty.call(body, k)) fields[k] = body[k];
     }
     if (body.graph) fields.graph = JSON.stringify(body.graph);
-    AutomationRepository.update(idMatch[1], fields);
+    await AutomationRepository.update(idMatch[1], fields);
     return json(res, 200, { ok: true });
   }
   if (idMatch && method === 'DELETE') {
     if (user.role !== 'admin') throw ApiError.forbidden('Apenas admin');
-    AutomationRepository.delete(idMatch[1]);
+    await AutomationRepository.delete(idMatch[1]);
     return json(res, 200, { ok: true });
   }
 
   if (path === '/automations/seed-defaults' && method === 'POST') {
     if (user.role === 'atendente') throw ApiError.forbidden();
-    const id = AutomationRepository.insert({
+    const id = await AutomationRepository.insert({
       name: 'Atendimento Principal',
       description: 'Menu inicial com 5 opções: caldeiraria, usinagem, soldagem, projetos ou atendente.',
       trigger: 'new_contact',

@@ -4,11 +4,10 @@
 import PDFDocument from 'pdfkit';
 import { json, readBody } from '../lib/http.js';
 import { authenticate } from '../lib/auth.js';
-import { QuoteRepository } from '../repositories/miscRepos.js';
-import { LeadEventRepository } from '../repositories/miscRepos.js';
+import { QuoteRepository, LeadEventRepository } from '../repositories/miscRepos.js';
 import { CreateQuoteSchema, parseBody } from '../lib/validators.js';
 import { ApiError, asyncHandler } from '../lib/errors.js';
-import { db } from '../lib/db.js';
+import { q1 } from '../lib/db.js';
 
 function deserialize(q: any) {
   return { ...q, items: q.items ? JSON.parse(q.items) : [] };
@@ -21,28 +20,28 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
   const method = req.method;
 
   if (path === '/quotes' && method === 'GET') {
-    return json(res, 200, { quotes: QuoteRepository.list().map(deserialize) });
+    return json(res, 200, { quotes: (await QuoteRepository.list()).map(deserialize) });
   }
   if (path === '/quotes' && method === 'POST') {
     const body = parseBody(CreateQuoteSchema, await readBody(req));
-    const { id, number } = QuoteRepository.insert({ ...body, user_id: user.id });
-    LeadEventRepository.insert({ lead_id: body.lead_id, user_id: user.id, type: 'quote_created', description: `Orçamento criado: ${body.title}` });
+    const { id, number } = await QuoteRepository.insert({ ...body, user_id: user.id });
+    await LeadEventRepository.insert({ lead_id: body.lead_id, user_id: user.id, type: 'quote_created', description: `Orçamento criado: ${body.title}` });
     return json(res, 201, { id, number });
   }
 
   const idMatch = path.match(/^\/quotes\/([^\/]+)$/);
   if (idMatch && method === 'GET') {
-    const quote = QuoteRepository.findById(idMatch[1]);
+    const quote = await QuoteRepository.findById(idMatch[1]);
     if (!quote) throw ApiError.notFound('Orçamento não encontrado');
     return json(res, 200, deserialize(quote));
   }
   if (idMatch && method === 'PUT') {
     const body = await readBody(req);
-    QuoteRepository.update(idMatch[1], body);
+    await QuoteRepository.update(idMatch[1], body);
     return json(res, 200, { ok: true });
   }
   if (idMatch && method === 'DELETE') {
-    QuoteRepository.delete(idMatch[1]);
+    await QuoteRepository.delete(idMatch[1]);
     return json(res, 200, { ok: true });
   }
 
@@ -50,10 +49,10 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
   // regex above already requires an exact match, so /quotes/x/pdf falls through here.
   const pdfMatch = path.match(/^\/quotes\/([^\/]+)\/pdf$/);
   if (pdfMatch && method === 'GET') {
-    const quote = QuoteRepository.findById(pdfMatch[1]);
+    const quote = await QuoteRepository.findById(pdfMatch[1]);
     if (!quote) throw ApiError.notFound('Orcamento nao encontrado');
 
-    const lead = db.prepare(`SELECT id, name, email, phone, company FROM leads WHERE id = ?`).get(quote.lead_id) as any;
+    const lead = (await q1(`SELECT id, name, email, phone, company FROM leads WHERE id = $1`, [quote.lead_id])) as any;
     const items: any[] = quote.items ? JSON.parse(quote.items) : [];
 
     const doc = new PDFDocument({ size: 'A4', margin: 50 });

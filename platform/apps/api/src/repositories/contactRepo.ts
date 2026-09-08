@@ -1,7 +1,7 @@
 /**
  * Contact Repository
  */
-import { db } from '../lib/db.js';
+import { q, q1, qe } from '../lib/db.js';
 
 export interface ContactRow {
   id: string;
@@ -17,31 +17,31 @@ export interface ContactRow {
 }
 
 export const ContactRepository = {
-  findByPhone(phone: string): ContactRow | undefined {
+  async findByPhone(phone: string): Promise<ContactRow | undefined> {
     const digits = phone.replace(/\D/g, '');
-    return db.prepare(`SELECT * FROM contacts WHERE phone = ? OR phone = ?`).get(phone, digits) as ContactRow | undefined;
+    return (await q1(`SELECT * FROM contacts WHERE phone = $1 OR phone = $2`, [phone, digits])) as ContactRow | undefined;
   },
-  findById(id: string): ContactRow | undefined {
-    return db.prepare(`SELECT * FROM contacts WHERE id = ?`).get(id) as ContactRow | undefined;
+  async findById(id: string): Promise<ContactRow | undefined> {
+    return (await q1(`SELECT * FROM contacts WHERE id = $1`, [id])) as ContactRow | undefined;
   },
-  insert(data: Partial<ContactRow> & Pick<ContactRow, 'phone'>): string {
+  async insert(data: Partial<ContactRow> & Pick<ContactRow, 'phone'>): Promise<string> {
     const id = data.id || `ct_${crypto.randomUUID().slice(0, 16)}`;
-    db.prepare(`INSERT INTO contacts (id, phone, whatsapp_id, name, email, company, avatar, tags)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(id, data.phone, data.whatsapp_id ?? null, data.name ?? null, data.email ?? null,
-        data.company ?? null, data.avatar ?? null, data.tags ?? null);
+    await qe(`INSERT INTO contacts (id, phone, whatsapp_id, name, email, company, avatar, tags)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [id, data.phone, data.whatsapp_id ?? null, data.name ?? null, data.email ?? null,
+        data.company ?? null, data.avatar ?? null, data.tags ?? null]);
     return id;
   },
-  update(id: string, fields: Partial<ContactRow>): void {
+  async update(id: string, fields: Partial<ContactRow>): Promise<void> {
     const allowed: (keyof ContactRow)[] = ['name', 'email', 'company', 'avatar', 'tags', 'whatsapp_id'];
     const sets: string[] = [];
     const params: any[] = [];
     for (const k of allowed) {
-      if (k in fields) { sets.push(`${k} = ?`); params.push((fields as any)[k]); }
+      if (k in fields) { sets.push(`${k} = $${params.length + 1}`); params.push((fields as any)[k]); }
     }
     if (!sets.length) return;
-    sets.push(`updated_at = datetime('now')`);
+    sets.push(`updated_at = now()`);
     params.push(id);
-    db.prepare(`UPDATE contacts SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    await qe(`UPDATE contacts SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
   },
 };

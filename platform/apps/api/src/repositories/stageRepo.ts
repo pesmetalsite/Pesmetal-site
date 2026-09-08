@@ -1,7 +1,7 @@
 /**
  * Pipeline / Stage Repository
  */
-import { db } from '../lib/db.js';
+import { q, q1, qe } from '../lib/db.js';
 
 export interface StageRow {
   id: string;
@@ -16,36 +16,37 @@ export interface StageRow {
 }
 
 export const StageRepository = {
-  list(activeOnly = true): StageRow[] {
-    const q = activeOnly ? `WHERE active = 1` : '';
-    return db.prepare(`SELECT * FROM pipeline_stages ${q} ORDER BY position ASC`).all() as StageRow[];
+  async list(activeOnly = true): Promise<StageRow[]> {
+    const where = activeOnly ? `WHERE active = 1` : '';
+    return (await q(`SELECT * FROM pipeline_stages ${where} ORDER BY position ASC`)) as StageRow[];
   },
-  findById(id: string): StageRow | undefined {
-    return db.prepare(`SELECT * FROM pipeline_stages WHERE id = ?`).get(id) as StageRow | undefined;
+  async findById(id: string): Promise<StageRow | undefined> {
+    return (await q1(`SELECT * FROM pipeline_stages WHERE id = $1`, [id])) as StageRow | undefined;
   },
-  insert(data: Partial<StageRow> & Pick<StageRow, 'name'>): string {
+  async insert(data: Partial<StageRow> & Pick<StageRow, 'name'>): Promise<string> {
     const id = data.id || `stage_${crypto.randomUUID().slice(0, 8)}`;
-    const max = (db.prepare(`SELECT MAX(position) as m FROM pipeline_stages`).get() as any)?.m ?? 0;
-    db.prepare(`INSERT INTO pipeline_stages (id, name, color, position, is_initial, is_won, is_lost, active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 1)`)
-      .run(id, data.name, data.color ?? '#ff6b1a', data.position ?? (max + 1), data.is_initial ?? 0, data.is_won ?? 0, data.is_lost ?? 0);
+    const row = (await q1(`SELECT MAX(position) as m FROM pipeline_stages`)) as any;
+    const max = Number(row?.m ?? 0);
+    await qe(`INSERT INTO pipeline_stages (id, name, color, position, is_initial, is_won, is_lost, active)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, 1)`,
+      [id, data.name, data.color ?? '#ff6b1a', data.position ?? (max + 1), data.is_initial ?? 0, data.is_won ?? 0, data.is_lost ?? 0]);
     return id;
   },
-  update(id: string, fields: Partial<StageRow>): void {
+  async update(id: string, fields: Partial<StageRow>): Promise<void> {
     const allowed: (keyof StageRow)[] = ['name', 'color', 'position', 'active', 'is_initial', 'is_won', 'is_lost'];
     const sets: string[] = [];
     const params: any[] = [];
     for (const k of allowed) {
-      if (k in fields) { sets.push(`${k} = ?`); params.push((fields as any)[k]); }
+      if (k in fields) { sets.push(`${k} = $${params.length + 1}`); params.push((fields as any)[k]); }
     }
     if (!sets.length) return;
     params.push(id);
-    db.prepare(`UPDATE pipeline_stages SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    await qe(`UPDATE pipeline_stages SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
   },
-  delete(id: string): void {
-    db.prepare(`DELETE FROM pipeline_stages WHERE id = ?`).run(id);
+  async delete(id: string): Promise<void> {
+    await qe(`DELETE FROM pipeline_stages WHERE id = $1`, [id]);
   },
-  findInitial(): StageRow | undefined {
-    return db.prepare(`SELECT * FROM pipeline_stages WHERE is_initial = 1 LIMIT 1`).get() as StageRow | undefined;
+  async findInitial(): Promise<StageRow | undefined> {
+    return (await q1(`SELECT * FROM pipeline_stages WHERE is_initial = 1 LIMIT 1`)) as StageRow | undefined;
   },
 };

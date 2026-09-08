@@ -3,7 +3,7 @@
  */
 import { json, readBody, getQuery } from '../lib/http.js';
 import { authenticate } from '../lib/auth.js';
-import { db } from '../lib/db.js';
+import { q1 } from '../lib/db.js';
 import { ConversationRepository, MessageRepository } from '../repositories/conversationRepo.js';
 import { ContactRepository } from '../repositories/contactRepo.js';
 import { Evolution } from '../services/evolution.js';
@@ -46,7 +46,7 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
   // GET /whatsapp/conversations
   if (path === '/whatsapp/conversations' && method === 'GET') {
     const q = getQuery(url);
-    const conversations = ConversationRepository.list({
+    const conversations = await ConversationRepository.list({
       status: q.status, assigned_user_id: q.assigned_user_id, search: q.search, stage_id: q.stage_id,
     });
     return json(res, 200, { conversations });
@@ -55,28 +55,28 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
   // /whatsapp/conversations/:id/messages
   const msgsMatch = path.match(/^\/whatsapp\/conversations\/([^\/]+)\/messages$/);
   if (msgsMatch && method === 'GET') {
-    const messages = MessageRepository.listByConversation(msgsMatch[1]);
-    ConversationRepository.update(msgsMatch[1], { unread_count: 0 });
+    const messages = await MessageRepository.listByConversation(msgsMatch[1]);
+    await ConversationRepository.update(msgsMatch[1], { unread_count: 0 });
     return json(res, 200, { messages });
   }
 
   if (msgsMatch && method === 'POST') {
     const body = await readBody(req);
     if (!body.text) throw ApiError.validation('text obrigatório');
-    const conv = ConversationRepository.findById(msgsMatch[1]);
+    const conv = await ConversationRepository.findById(msgsMatch[1]);
     if (!conv) throw ApiError.notFound('Conversa');
-    const contact = ContactRepository.findById(conv.contact_id);
+    const contact = await ContactRepository.findById(conv.contact_id);
     if (!contact) throw ApiError.notFound('Contato');
     const number = formatNumber(contact.phone);
-    const senderName = getSenderNameForConversation(msgsMatch[1]);
+    const senderName = await getSenderNameForConversation(msgsMatch[1]);
     const prefixedText = senderName ? `*${senderName}*\n${body.text}` : body.text;
     try {
       await Evolution.sendText({ number, text: prefixedText });
-      const id = MessageRepository.insert({
+      const id = await MessageRepository.insert({
         conversation_id: msgsMatch[1], direction: 'outgoing', type: 'text',
         content: body.text, status: 'sent', sent_by_user_id: user.id,
       });
-      ConversationRepository.update(msgsMatch[1], { last_message_at: new Date().toISOString() });
+      await ConversationRepository.update(msgsMatch[1], { last_message_at: new Date().toISOString() });
       return json(res, 201, { id, status: 'sent' });
     } catch (err: any) {
       return json(res, 502, { error: 'Falha ao enviar', code: 'integration_error', detail: String(err?.message || err) });
@@ -86,18 +86,18 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
   // /whatsapp/conversations/:id/{pause|resume|takeover}
   const actionMatch = path.match(/^\/whatsapp\/conversations\/([^\/]+)\/(pause|resume|takeover)$/);
   if (actionMatch && method === 'POST') {
-    if (actionMatch[2] === 'pause' || actionMatch[2] === 'takeover') pauseAutomation(actionMatch[1]);
-    else resumeAutomation(actionMatch[1]);
+    if (actionMatch[2] === 'pause' || actionMatch[2] === 'takeover') await pauseAutomation(actionMatch[1]);
+    else await resumeAutomation(actionMatch[1]);
     return json(res, 200, { ok: true });
   }
 
   throw ApiError.notFound('Endpoint WhatsApp');
 });
 
-function getSenderNameForConversation(convId: string): string | null {
-  const conv = ConversationRepository.findById(convId);
+async function getSenderNameForConversation(convId: string): Promise<string | null> {
+  const conv = await ConversationRepository.findById(convId);
   if (!conv?.lead_id) return null;
-  const lead = (db as any).prepare(`SELECT name, phone FROM leads WHERE id = ?`).get(conv.lead_id) as any;
+  const lead = (await q1(`SELECT name, phone FROM leads WHERE id = $1`, [conv.lead_id])) as any;
   return lead?.name || null;
 }
 

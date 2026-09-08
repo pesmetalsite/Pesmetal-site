@@ -24,11 +24,11 @@ export interface CreateLeadInput {
   initial_message?: string;
 }
 
-export function findOrCreateContactId(phone: string, data?: Partial<{ name: string; email: string; company: string }>): string {
-  let contact = ContactRepository.findByPhone(phone);
+export async function findOrCreateContactId(phone: string, data?: Partial<{ name: string; email: string; company: string }>): Promise<string> {
+  let contact = await ContactRepository.findByPhone(phone);
   if (contact) {
     if (data && Object.values(data).some(Boolean)) {
-      ContactRepository.update(contact.id, {
+      await ContactRepository.update(contact.id, {
         name: data.name ?? contact.name ?? undefined,
         email: data.email ?? contact.email ?? undefined,
         company: data.company ?? contact.company ?? undefined,
@@ -39,9 +39,9 @@ export function findOrCreateContactId(phone: string, data?: Partial<{ name: stri
   return ContactRepository.insert({ phone: phone.replace(/\D/g, ''), ...data });
 }
 
-export function recordEvent(input: { lead_id?: string | null; user_id?: string | null; type: string; payload?: any; description?: string }) {
+export async function recordEvent(input: { lead_id?: string | null; user_id?: string | null; type: string; payload?: any; description?: string }) {
   if (!input.lead_id) return;
-  LeadEventRepository.insert({
+  await LeadEventRepository.insert({
     lead_id: input.lead_id,
     user_id: input.user_id ?? undefined,
     type: input.type,
@@ -50,11 +50,11 @@ export function recordEvent(input: { lead_id?: string | null; user_id?: string |
   });
 }
 
-export function createLead(input: CreateLeadInput): { lead_id: string; contact_id: string; is_new: boolean } {
-  const contactId = findOrCreateContactId(input.phone, { name: input.name, email: input.email, company: input.company });
+export async function createLead(input: CreateLeadInput): Promise<{ lead_id: string; contact_id: string; is_new: boolean }> {
+  const contactId = await findOrCreateContactId(input.phone, { name: input.name, email: input.email, company: input.company });
 
   // Não duplica lead ativo para o mesmo contato
-  const existing = LeadRepository.findActiveByContactId(contactId);
+  const existing = await LeadRepository.findActiveByContactId(contactId);
   if (existing) {
     logger.info('lead already exists, returning', { lead_id: existing.id, contact_id: contactId });
     return { lead_id: existing.id, contact_id: contactId, is_new: false };
@@ -62,9 +62,9 @@ export function createLead(input: CreateLeadInput): { lead_id: string; contact_i
 
   const tracking = input.tracking ?? {};
   const src = deriveSourceLabel(tracking);
-  const initialStage = StageRepository.findInitial();
+  const initialStage = await StageRepository.findInitial();
 
-  const leadId = LeadRepository.insert({
+  const leadId = await LeadRepository.insert({
     contact_id: contactId,
     stage_id: initialStage?.id ?? null,
     service_id: input.service_id ?? null,
@@ -93,7 +93,7 @@ export function createLead(input: CreateLeadInput): { lead_id: string; contact_i
     tracking_session_id: (tracking as any).id ?? null,
   });
 
-  recordEvent({
+  await recordEvent({
     lead_id: leadId,
     type: 'lead_created',
     payload: { source: input.source ?? src.source, campaign: src.campaign },
@@ -104,23 +104,23 @@ export function createLead(input: CreateLeadInput): { lead_id: string; contact_i
   return { lead_id: leadId, contact_id: contactId, is_new: true };
 }
 
-export function moveLead(leadId: string, stageId: string, userId?: string | null): boolean {
-  const lead = LeadRepository.findById(leadId);
+export async function moveLead(leadId: string, stageId: string, userId?: string | null): Promise<boolean> {
+  const lead = await LeadRepository.findById(leadId);
   if (!lead) return false;
   if (lead.stage_id === stageId) return true;
 
-  const newStage = StageRepository.findById(stageId);
+  const newStage = await StageRepository.findById(stageId);
   if (!newStage) return false;
 
-  LeadRepository.updateFields(leadId, { stage_id: stageId });
+  await LeadRepository.updateFields(leadId, { stage_id: stageId });
 
   // Atualiza status baseado na etapa
   let newStatus: LeadStatus = lead.status;
   if (newStage.is_won) newStatus = 'won';
   else if (newStage.is_lost) newStatus = 'lost';
   if (newStatus !== lead.status) {
-    LeadRepository.updateFields(leadId, { status: newStatus });
-    recordEvent({
+    await LeadRepository.updateFields(leadId, { status: newStatus });
+    await recordEvent({
       lead_id: leadId,
       user_id: userId,
       type: newStatus === 'won' ? 'deal_won' : 'deal_lost',
@@ -128,7 +128,7 @@ export function moveLead(leadId: string, stageId: string, userId?: string | null
     });
   }
 
-  recordEvent({
+  await recordEvent({
     lead_id: leadId,
     user_id: userId,
     type: 'stage_changed',
@@ -139,18 +139,18 @@ export function moveLead(leadId: string, stageId: string, userId?: string | null
   return true;
 }
 
-export function getLeadFull(leadId: string) {
-  const lead = LeadRepository.findFull(leadId);
+export async function getLeadFull(leadId: string) {
+  const lead = await LeadRepository.findFull(leadId);
   if (!lead) return null;
-  const events = LeadEventRepository.listByLead(leadId);
-  const stage = lead.stage_id ? StageRepository.findById(lead.stage_id) : null;
+  const events = await LeadEventRepository.listByLead(leadId);
+  const stage = lead.stage_id ? await StageRepository.findById(lead.stage_id) : null;
   return { ...lead, stage, events };
 }
 
-export function listLeads(filter: Parameters<typeof LeadRepository.list>[0] = {}) {
+export async function listLeads(filter: Parameters<typeof LeadRepository.list>[0] = {}) {
   return LeadRepository.list(filter);
 }
 
-export function deleteLead(leadId: string) {
-  LeadRepository.delete(leadId);
+export async function deleteLead(leadId: string) {
+  await LeadRepository.delete(leadId);
 }

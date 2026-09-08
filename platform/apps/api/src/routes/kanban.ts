@@ -18,21 +18,21 @@ export const kanbanRouter = asyncHandler(async (req, res, url) => {
 
   // GET /kanban/board
   if (path === '/kanban/board' && method === 'GET') {
-    const stages = StageRepository.list(true);
-    const leads = LeadRepository.list({ status: 'active' });
+    const stages = await StageRepository.list(true);
+    const leads = await LeadRepository.list({ status: 'active' });
     return json(res, 200, { stages, leads });
   }
 
   // GET /kanban/stages
   if (path === '/kanban/stages' && method === 'GET') {
-    return json(res, 200, { stages: StageRepository.list(false) });
+    return json(res, 200, { stages: await StageRepository.list(false) });
   }
 
   // POST /kanban/stages
   if (path === '/kanban/stages' && method === 'POST') {
     if (user.role === 'atendente') throw ApiError.forbidden();
     const body = parseBody(CreateStageSchema, await readBody(req));
-    const id = StageRepository.insert(body);
+    const id = await StageRepository.insert(body);
     return json(res, 201, { id });
   }
 
@@ -41,21 +41,21 @@ export const kanbanRouter = asyncHandler(async (req, res, url) => {
   if (stageMatch && method === 'PUT') {
     if (user.role === 'atendente') throw ApiError.forbidden();
     const body = parseBody(UpdateStageSchema, await readBody(req));
-    StageRepository.update(stageMatch[1], body as any);
+    await StageRepository.update(stageMatch[1], body as any);
     return json(res, 200, { ok: true });
   }
 
   // DELETE /kanban/stages/:id
   if (stageMatch && method === 'DELETE') {
     if (user.role !== 'admin') throw ApiError.forbidden('Apenas admin');
-    StageRepository.delete(stageMatch[1]);
+    await StageRepository.delete(stageMatch[1]);
     return json(res, 200, { ok: true });
   }
 
   // POST /kanban/move
   if (path === '/kanban/move' && method === 'POST') {
     const body = parseBody(MoveLeadSchema, await readBody(req));
-    const ok = moveLead(body.lead_id, body.stage_id, user.id);
+    const ok = await moveLead(body.lead_id, body.stage_id, user.id);
     if (!ok) throw ApiError.notFound('Lead ou stage');
     return json(res, 200, { ok: true });
   }

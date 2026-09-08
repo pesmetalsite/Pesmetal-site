@@ -4,7 +4,7 @@
  */
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { db } from './db.js';
+import { q, q1, qe } from './db.js';
 import { nanoid } from 'nanoid';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
@@ -24,15 +24,15 @@ export interface User {
 }
 
 export async function ensureAdminUser() {
-  const exists = db.prepare('SELECT COUNT(*) as c FROM users').get() as { c: number };
-  if (exists.c === 0) {
+  const exists = (await q1('SELECT COUNT(*)::int as c FROM users')) as { c: number };
+  if (exists?.c === 0) {
     const email = process.env.ADMIN_EMAIL || 'admin@pesmetal.local';
     const password = process.env.ADMIN_PASSWORD || 'pesmetal123';
     const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    db.prepare(`
+    await qe(`
       INSERT INTO users (id, email, name, password_hash, role)
-      VALUES (?, ?, ?, ?, 'admin')
-    `).run(nanoid(), email, 'Administrador', hash);
+      VALUES ($1, $2, $3, $4, 'admin')
+    `, [nanoid(), email, 'Administrador', hash]);
     console.log(`✓ Usuário admin criado: ${email} / ${password}`);
   }
 }
@@ -57,13 +57,13 @@ export function verifyToken(token: string) {
   }
 }
 
-export function getUserById(id: string): User | null {
-  const row = db.prepare('SELECT id, email, name, role, avatar, active, created_at FROM users WHERE id = ?').get(id) as User | undefined;
+export async function getUserById(id: string): Promise<User | null> {
+  const row = (await q1('SELECT id, email, name, role, avatar, active, created_at FROM users WHERE id = $1', [id])) as User | undefined;
   return row || null;
 }
 
-export function getUserByEmail(email: string) {
-  return db.prepare('SELECT * FROM users WHERE email = ?').get(email) as (User & { password_hash: string }) | undefined;
+export async function getUserByEmail(email: string) {
+  return (await q1('SELECT * FROM users WHERE email = $1', [email])) as (User & { password_hash: string }) | undefined;
 }
 
 export function requireRole(role: Role, userRole: Role) {
@@ -77,7 +77,7 @@ export async function authenticate(req: any): Promise<User | null> {
   const token = header.slice(7);
   const decoded = verifyToken(token);
   if (!decoded) return null;
-  const user = getUserById(decoded.userId);
+  const user = await getUserById(decoded.userId);
   if (!user || !user.active) return null;
   return user;
 }

@@ -3,7 +3,7 @@
  */
 import { json, readBody } from '../lib/http.js';
 import { authenticate, hashPassword, verifyPassword, signToken, getUserById } from '../lib/auth.js';
-import { db } from '../lib/db.js';
+import { q, qe } from '../lib/db.js';
 import { LoginSchema, parseBody } from '../lib/validators.js';
 import { ApiError, asyncHandler } from '../lib/errors.js';
 
@@ -13,7 +13,7 @@ export const authRouter = asyncHandler(async (req, res, url) => {
 
   if (path === '/auth/login' && method === 'POST') {
     const body = parseBody(LoginSchema, await readBody(req));
-    const user = db.prepare(`SELECT * FROM users WHERE email = ? AND active = 1`).get(body.email) as any;
+    const user = (await q(`SELECT * FROM users WHERE email = $1 AND active = 1`, [body.email]))[0] as any;
     if (!user || !(await verifyPassword(body.password, user.password_hash))) {
       throw ApiError.unauthorized('Credenciais inválidas');
     }
@@ -27,7 +27,7 @@ export const authRouter = asyncHandler(async (req, res, url) => {
   if (path === '/auth/me' && method === 'GET') {
     const user = await authenticate(req);
     if (!user) throw ApiError.unauthorized();
-    const fresh = getUserById(user.id);
+    const fresh = await getUserById(user.id);
     return json(res, 200, { user: fresh });
   }
 
@@ -37,8 +37,8 @@ export const authRouter = asyncHandler(async (req, res, url) => {
     const body = await readBody(req);
     const id = `usr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
     const hash = await hashPassword(body.password);
-    db.prepare(`INSERT INTO users (id, email, name, password_hash, role) VALUES (?, ?, ?, ?, ?)`)
-      .run(id, body.email, body.name, hash, body.role || 'atendente');
+    await qe(`INSERT INTO users (id, email, name, password_hash, role) VALUES ($1, $2, $3, $4, $5)`,
+      [id, body.email, body.name, hash, body.role || 'atendente']);
     return json(res, 201, { id });
   }
 

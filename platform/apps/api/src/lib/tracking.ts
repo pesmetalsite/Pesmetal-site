@@ -1,7 +1,7 @@
 /**
  * Tracking Service — captura UTMs, fbclid, gclid e associa a leads.
  */
-import { db } from './db.js';
+import { q, q1, qe } from './db.js';
 import { nanoid } from 'nanoid';
 
 export interface TrackingPayload {
@@ -18,30 +18,30 @@ export interface TrackingPayload {
   ip?: string;
 }
 
-export function upsertTrackingSession(token: string, data: TrackingPayload) {
-  const existing = db.prepare('SELECT id FROM tracking_sessions WHERE session_token = ?').get(token) as { id: string } | undefined;
+export async function upsertTrackingSession(token: string, data: TrackingPayload) {
+  const existing = (await q1('SELECT id FROM tracking_sessions WHERE session_token = $1', [token])) as { id: string } | undefined;
   if (existing) return existing.id;
   const id = nanoid();
-  db.prepare(`
+  await qe(`
     INSERT INTO tracking_sessions (
       id, session_token, utm_source, utm_medium, utm_campaign, utm_content, utm_term,
       fbclid, gclid, referrer, landing_page, user_agent, ip
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+  `, [
     id, token,
     data.utm_source ?? null, data.utm_medium ?? null, data.utm_campaign ?? null,
     data.utm_content ?? null, data.utm_term ?? null, data.fbclid ?? null,
     data.gclid ?? null, data.referrer ?? null, data.landing_page ?? null,
     data.user_agent ?? null, data.ip ?? null
-  );
+  ]);
   return id;
 }
 
-export function getTrackingSession(id: string) {
-  return db.prepare('SELECT * FROM tracking_sessions WHERE id = ?').get(id);
+export async function getTrackingSession(id: string) {
+  return (await q1('SELECT * FROM tracking_sessions WHERE id = $1', [id]));
 }
 
-export function recordMarketingEvent(payload: {
+export async function recordMarketingEvent(payload: {
   type: string;
   lead_id?: string;
   contact_id?: string;
@@ -50,10 +50,10 @@ export function recordMarketingEvent(payload: {
   payload?: any;
 }) {
   const id = nanoid();
-  db.prepare(`
+  await qe(`
     INSERT INTO marketing_events (id, type, lead_id, contact_id, tracking_session_id, payload, source)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+  `, [
     id,
     payload.type,
     payload.lead_id ?? null,
@@ -61,7 +61,7 @@ export function recordMarketingEvent(payload: {
     payload.tracking_session_id ?? null,
     payload.payload ? JSON.stringify(payload.payload) : null,
     payload.source ?? null
-  );
+  ]);
   return id;
 }
 

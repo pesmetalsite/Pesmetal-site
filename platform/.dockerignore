@@ -1,0 +1,33 @@
+# --- Build context for the PESMETAL platform (used by apps/api/Dockerfile) ---
+
+# Dependencies / build artifacts
+node_modules
+**/node_modules
+dist
+**/dist
+.next
+**/.next
+out
+**/out
+
+# Secrets & local config — never bake into the image
+.env
+**/.env
+.env.*
+**/.env.*
+data
+**/data
+logs
+**/logs
+*.db
+**/*.db
+*.db-wal
+**/*.db-wal
+*.db-shm
+**/*.db-shm
+
+# IDE / OS / tooling
+.git
+**/.git
+.DS_Store
+Thumbs.db

@@ -62,77 +62,77 @@ const handlers: Record<string, Handler> = {
     return option.next;
   },
   set_interest: async (ctx, node) => {
-    const leadId = getLeadId(ctx);
+    const leadId = await getLeadId(ctx);
     if (leadId) {
-      LeadRepository.updateFields(leadId, { interest: node.config.value });
-      LeadEventRepository.insert({ lead_id: leadId, type: 'service_selected', description: `Interesse definido: ${node.config.value}` });
+      await LeadRepository.updateFields(leadId, { interest: node.config.value });
+      await LeadEventRepository.insert({ lead_id: leadId, type: 'service_selected', description: `Interesse definido: ${node.config.value}` });
     }
     return node.next ?? null;
   },
   move_stage: async (ctx, node) => {
-    const leadId = getLeadId(ctx);
+    const leadId = await getLeadId(ctx);
     if (leadId && node.config.stage_id) {
-      const current = LeadRepository.findById(leadId);
+      const current = await LeadRepository.findById(leadId);
       if (current && current.stage_id !== node.config.stage_id) {
-        const newStage = StageRepository.findById(node.config.stage_id);
+        const newStage = await StageRepository.findById(node.config.stage_id);
         if (newStage) {
-          LeadRepository.updateFields(leadId, { stage_id: node.config.stage_id });
-          LeadEventRepository.insert({ lead_id: leadId, type: 'stage_changed', payload: { from: current.stage_id, to: node.config.stage_id }, description: `Movido para ${newStage.name}` });
+          await LeadRepository.updateFields(leadId, { stage_id: node.config.stage_id });
+          await LeadEventRepository.insert({ lead_id: leadId, type: 'stage_changed', payload: { from: current.stage_id, to: node.config.stage_id }, description: `Movido para ${newStage.name}` });
         }
       }
     }
     return node.next ?? null;
   },
   set_tag: async (ctx, node) => {
-    const leadId = getLeadId(ctx);
+    const leadId = await getLeadId(ctx);
     if (leadId && node.config.tag) {
-      const lead = LeadRepository.findById(leadId);
+      const lead = await LeadRepository.findById(leadId);
       if (lead) {
-        const c = ContactRepository.findById(lead.contact_id);
+        const c = await ContactRepository.findById(lead.contact_id);
         if (c) {
           const tags = c.tags ? JSON.parse(c.tags) : [];
           if (!tags.includes(node.config.tag)) tags.push(node.config.tag);
-          ContactRepository.update(c.id, { tags: JSON.stringify(tags) });
+          await ContactRepository.update(c.id, { tags: JSON.stringify(tags) });
         }
       }
     }
     return node.next ?? null;
   },
   assign_user: async (ctx, node) => {
-    const leadId = getLeadId(ctx);
+    const leadId = await getLeadId(ctx);
     if (leadId && node.config.user_id) {
-      LeadRepository.updateFields(leadId, { assigned_user_id: node.config.user_id });
-      ConversationRepository.update(ctx.conversationId, { assigned_user_id: node.config.user_id });
+      await LeadRepository.updateFields(leadId, { assigned_user_id: node.config.user_id });
+      await ConversationRepository.update(ctx.conversationId, { assigned_user_id: node.config.user_id });
     }
     return node.next ?? null;
   },
   request_info: async (ctx, node, input) => {
-    if (input) saveInput(ctx, node, input);
+    if (input) await saveInput(ctx, node, input);
     await sendMessage(ctx, node);
     return undefined;
   },
   request_file: async (ctx, node, input) => {
-    if (input) saveInput(ctx, node, input);
+    if (input) await saveInput(ctx, node, input);
     await sendMessage(ctx, node);
     return undefined;
   },
   wait_input: async (ctx, node, input) => {
-    if (input) saveInput(ctx, node, input);
+    if (input) await saveInput(ctx, node, input);
     return node.next ?? null;
   },
   transfer_human: async (ctx) => {
-    ConversationRepository.update(ctx.conversationId, {
+    await ConversationRepository.update(ctx.conversationId, {
       automation_status: 'transferred', status: 'human', current_node: null,
     });
-    const leadId = getLeadId(ctx);
+    const leadId = await getLeadId(ctx);
     if (leadId) {
-      LeadRepository.updateFields(leadId, { stage_id: 'stage_atend' });
-      LeadEventRepository.insert({ lead_id: leadId, type: 'human_takeover', description: 'Cliente solicitou atendente humano' });
+      await LeadRepository.updateFields(leadId, { stage_id: 'stage_atend' });
+      await LeadEventRepository.insert({ lead_id: leadId, type: 'human_takeover', description: 'Cliente solicitou atendente humano' });
     }
     return null;
   },
   end: async (ctx) => {
-    ConversationRepository.update(ctx.conversationId, { automation_status: 'completed', current_node: null });
+    await ConversationRepository.update(ctx.conversationId, { automation_status: 'completed', current_node: null });
     return null;
   },
   go_back: async (ctx) => {
@@ -149,27 +149,27 @@ const handlers: Record<string, Handler> = {
 };
 
 // === Helpers ===
-function getLeadId(ctx: HandlerContext): string | null {
-  const conv = ConversationRepository.findById(ctx.conversationId);
+async function getLeadId(ctx: HandlerContext): Promise<string | null> {
+  const conv = await ConversationRepository.findById(ctx.conversationId);
   return conv?.lead_id ?? null;
 }
 
-function saveInput(ctx: HandlerContext, node: Node, input: string) {
-  const conv = ConversationRepository.findById(ctx.conversationId);
+async function saveInput(ctx: HandlerContext, node: Node, input: string) {
+  const conv = await ConversationRepository.findById(ctx.conversationId);
   const ctxJson = conv?.context ? JSON.parse(conv.context) : {};
   ctxJson.last_input = input;
   if (node.config?.capture_as) ctxJson[node.config.capture_as] = input;
-  ConversationRepository.update(ctx.conversationId, { context: JSON.stringify(ctxJson) });
+  await ConversationRepository.update(ctx.conversationId, { context: JSON.stringify(ctxJson) });
 }
 
 async function sendMessage(ctx: HandlerContext, node: Node) {
-  const conv = ConversationRepository.findById(ctx.conversationId);
+  const conv = await ConversationRepository.findById(ctx.conversationId);
   if (!conv) return;
-  const contact = ContactRepository.findById(conv.contact_id);
+  const contact = await ContactRepository.findById(conv.contact_id);
   if (!contact) return;
   const number = formatNumber(contact.phone);
   const text = node.config?.text ?? '';
-  const msgId = MessageRepository.insert({
+  const msgId = await MessageRepository.insert({
     conversation_id: ctx.conversationId,
     direction: 'outgoing',
     type: 'text',
@@ -178,10 +178,10 @@ async function sendMessage(ctx: HandlerContext, node: Node) {
   });
   try {
     await Evolution.sendText({ number, text });
-    MessageRepository.updateStatus(msgId, 'sent');
-    ConversationRepository.update(ctx.conversationId, { last_message_at: new Date().toISOString() });
+    await MessageRepository.updateStatus(msgId, 'sent');
+    await ConversationRepository.update(ctx.conversationId, { last_message_at: new Date().toISOString() });
   } catch (err: any) {
-    MessageRepository.updateStatus(msgId, 'failed');
+    await MessageRepository.updateStatus(msgId, 'failed');
     logger.error('evolution send failed', { conversation_id: ctx.conversationId, error: String(err?.message || err) });
     throw err;
   }
@@ -209,8 +209,8 @@ function parseGraph(raw: string): Graph {
 // === Engine público ===
 export async function startAutomation(conversationId: string, automationId?: string): Promise<boolean> {
   const automation = automationId
-    ? AutomationRepository.findById(automationId)
-    : AutomationRepository.listActive()[0];
+    ? await AutomationRepository.findById(automationId)
+    : (await AutomationRepository.listActive())[0];
   if (!automation) {
     logger.warn('no active automation available', { conversationId });
     return false;
@@ -222,15 +222,15 @@ export async function startAutomation(conversationId: string, automationId?: str
     return false;
   }
 
-  ConversationRepository.update(conversationId, {
+  await ConversationRepository.update(conversationId, {
     automation_id: automation.id,
     automation_status: 'running',
     current_node: graph.entry,
     status: 'active',
   });
 
-  const leadId = getLeadId({ conversationId, automationId: automation.id, graph });
-  LeadEventRepository.insert({
+  const leadId = await getLeadId({ conversationId, automationId: automation.id, graph });
+  await LeadEventRepository.insert({
     lead_id: leadId,
     type: 'automation_started',
     payload: { automation_id: automation.id, automation_name: automation.name },
@@ -242,11 +242,11 @@ export async function startAutomation(conversationId: string, automationId?: str
 }
 
 export async function processIncomingMessage(conversationId: string, message: string): Promise<void> {
-  const conv = ConversationRepository.findById(conversationId);
+  const conv = await ConversationRepository.findById(conversationId);
   if (!conv) return;
   if (conv.automation_status === 'paused' || conv.status === 'human') return;
 
-  const automation = conv.automation_id ? AutomationRepository.findById(conv.automation_id) : null;
+  const automation = conv.automation_id ? await AutomationRepository.findById(conv.automation_id) : null;
   if (!automation) {
     await startAutomation(conversationId);
     return;
@@ -273,39 +273,39 @@ async function runNode(ctx: HandlerContext, nodeId: string, input?: string): Pro
     return;
   }
 
-  ConversationRepository.update(ctx.conversationId, { current_node: nodeId });
+  await ConversationRepository.update(ctx.conversationId, { current_node: nodeId });
 
   try {
     const next = await handler(ctx, node, input);
     if (next === undefined) {
       // fica aguardando input
-      ConversationRepository.update(ctx.conversationId, { automation_status: 'waiting_input' });
+      await ConversationRepository.update(ctx.conversationId, { automation_status: 'waiting_input' });
       return;
     }
     if (next === null) {
-      ConversationRepository.update(ctx.conversationId, { automation_status: 'completed', current_node: null });
+      await ConversationRepository.update(ctx.conversationId, { automation_status: 'completed', current_node: null });
       return;
     }
     await runNode(ctx, next);
   } catch (err: any) {
     logger.error('automation node failed', { nodeId, type: node.type, error: String(err?.message || err) });
-    ConversationRepository.update(ctx.conversationId, { automation_status: 'paused', current_node: null });
+    await ConversationRepository.update(ctx.conversationId, { automation_status: 'paused', current_node: null });
   }
 }
 
-export function pauseAutomation(conversationId: string) {
-  ConversationRepository.update(conversationId, { automation_status: 'paused', status: 'human', current_node: null });
+export async function pauseAutomation(conversationId: string) {
+  await ConversationRepository.update(conversationId, { automation_status: 'paused', status: 'human', current_node: null });
 }
 
-export function resumeAutomation(conversationId: string) {
-  ConversationRepository.update(conversationId, { automation_status: 'running', status: 'active' });
+export async function resumeAutomation(conversationId: string) {
+  await ConversationRepository.update(conversationId, { automation_status: 'running', status: 'active' });
 }
 
-export function getAutomationById(id: string) {
+export async function getAutomationById(id: string) {
   return AutomationRepository.findById(id);
 }
 
-export function listActiveAutomations() {
+export async function listActiveAutomations() {
   return AutomationRepository.listActive();
 }
 

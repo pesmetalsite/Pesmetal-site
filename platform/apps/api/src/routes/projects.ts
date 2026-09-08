@@ -18,13 +18,13 @@ export const projectsRouter = asyncHandler(async (req, res, url) => {
   const method = req.method;
 
   if (path === '/projects' && method === 'GET') {
-    const list = ProjectRepository.list(true).map(deserialize);
+    const list = (await ProjectRepository.list(true)).map(deserialize);
     return json(res, 200, { projects: list });
   }
   if (path === '/projects' && method === 'POST') {
     if (user.role === 'atendente') throw ApiError.forbidden();
     const body = parseBody(CreateProjectSchema, await readBody(req));
-    const id = ProjectRepository.insert(body);
+    const id = await ProjectRepository.insert(body);
     return json(res, 201, { id });
   }
 
@@ -32,12 +32,12 @@ export const projectsRouter = asyncHandler(async (req, res, url) => {
   if (idMatch && method === 'PUT') {
     if (user.role === 'atendente') throw ApiError.forbidden();
     const body = await readBody(req);
-    ProjectRepository.update(idMatch[1], body);
+    await ProjectRepository.update(idMatch[1], body);
     return json(res, 200, { ok: true });
   }
   if (idMatch && method === 'DELETE') {
     if (user.role !== 'admin') throw ApiError.forbidden();
-    ProjectRepository.delete(idMatch[1]);
+    await ProjectRepository.delete(idMatch[1]);
     return json(res, 200, { ok: true });
   }
 

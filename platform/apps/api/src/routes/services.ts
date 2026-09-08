@@ -13,11 +13,11 @@ export const servicesRouter = asyncHandler(async (req, res, url) => {
   const path = url.pathname;
   const method = req.method;
 
-  if (path === '/services' && method === 'GET') return json(res, 200, { services: ServiceRepository.list(true) });
+  if (path === '/services' && method === 'GET') return json(res, 200, { services: await ServiceRepository.list(true) });
   if (path === '/services' && method === 'POST') {
     if (user.role === 'atendente') throw ApiError.forbidden();
     const body = parseBody(CreateServiceSchema, await readBody(req));
-    const id = ServiceRepository.insert(body);
+    const id = await ServiceRepository.insert(body);
     return json(res, 201, { id });
   }
 
@@ -25,12 +25,12 @@ export const servicesRouter = asyncHandler(async (req, res, url) => {
   if (idMatch && method === 'PUT') {
     if (user.role === 'atendente') throw ApiError.forbidden();
     const body = await readBody(req);
-    ServiceRepository.update(idMatch[1], body);
+    await ServiceRepository.update(idMatch[1], body);
     return json(res, 200, { ok: true });
   }
   if (idMatch && method === 'DELETE') {
     if (user.role !== 'admin') throw ApiError.forbidden();
-    ServiceRepository.delete(idMatch[1]);
+    await ServiceRepository.delete(idMatch[1]);
     return json(res, 200, { ok: true });
   }
 

@@ -1,7 +1,7 @@
 /**
  * Automation Repository
  */
-import { db } from '../lib/db.js';
+import { q, q1, qe } from '../lib/db.js';
 
 export interface AutomationRow {
   id: string;
@@ -16,36 +16,36 @@ export interface AutomationRow {
 }
 
 export const AutomationRepository = {
-  list(): AutomationRow[] {
-    return db.prepare(`SELECT * FROM automations ORDER BY updated_at DESC`).all() as AutomationRow[];
+  async list(): Promise<AutomationRow[]> {
+    return (await q(`SELECT * FROM automations ORDER BY updated_at DESC`)) as AutomationRow[];
   },
-  listActive(): AutomationRow[] {
-    return db.prepare(`SELECT * FROM automations WHERE status = 'active'`).all() as AutomationRow[];
+  async listActive(): Promise<AutomationRow[]> {
+    return (await q(`SELECT * FROM automations WHERE status = 'active'`)) as AutomationRow[];
   },
-  findById(id: string): AutomationRow | undefined {
-    return db.prepare(`SELECT * FROM automations WHERE id = ?`).get(id) as AutomationRow | undefined;
+  async findById(id: string): Promise<AutomationRow | undefined> {
+    return (await q1(`SELECT * FROM automations WHERE id = $1`, [id])) as AutomationRow | undefined;
   },
-  insert(data: Partial<AutomationRow> & Pick<AutomationRow, 'name' | 'trigger' | 'graph'>): string {
+  async insert(data: Partial<AutomationRow> & Pick<AutomationRow, 'name' | 'trigger' | 'graph'>): Promise<string> {
     const id = data.id || `auto_${crypto.randomUUID().slice(0, 16)}`;
-    db.prepare(`INSERT INTO automations (id, name, description, trigger, keyword, status, graph)
-                VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run(id, data.name, data.description ?? null, data.trigger, data.keyword ?? null,
-        data.status ?? 'draft', data.graph);
+    await qe(`INSERT INTO automations (id, name, description, trigger, keyword, status, graph)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [id, data.name, data.description ?? null, data.trigger, data.keyword ?? null,
+        data.status ?? 'draft', data.graph]);
     return id;
   },
-  update(id: string, fields: Partial<AutomationRow>): void {
+  async update(id: string, fields: Partial<AutomationRow>): Promise<void> {
     const allowed: (keyof AutomationRow)[] = ['name', 'description', 'trigger', 'keyword', 'status', 'graph'];
     const sets: string[] = [];
     const params: any[] = [];
     for (const k of allowed) {
-      if (k in fields) { sets.push(`${k} = ?`); params.push((fields as any)[k]); }
+      if (k in fields) { sets.push(`${k} = $${params.length + 1}`); params.push((fields as any)[k]); }
     }
     if (!sets.length) return;
-    sets.push(`updated_at = datetime('now')`);
+    sets.push(`updated_at = now()`);
     params.push(id);
-    db.prepare(`UPDATE automations SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    await qe(`UPDATE automations SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
   },
-  delete(id: string): void {
-    db.prepare(`DELETE FROM automations WHERE id = ?`).run(id);
+  async delete(id: string): Promise<void> {
+    await qe(`DELETE FROM automations WHERE id = $1`, [id]);
   },
 };
