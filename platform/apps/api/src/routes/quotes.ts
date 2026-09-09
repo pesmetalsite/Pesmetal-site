@@ -87,9 +87,28 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       const companyAddress = company.company_address || '';
       const companyCnpj = company.company_cnpj || '39.350.593.0001/51';
 
-      const pageBottom = doc.page.height - doc.page.margins.bottom;
+      // conteúdo fica acima da área do rodapé; rodapé fixo no fim de cada página
+      const footerY = doc.page.height - doc.page.margins.bottom - 44; // ~750
+      const pageBottom = footerY - 10;
       const line = (y: number) => { doc.moveTo(45, y).lineTo(555, y).strokeColor('#e5e8eb').lineWidth(1).stroke(); };
       const lineGreen = (y: number) => { doc.moveTo(45, y).lineTo(555, y).strokeColor('#1a9e5a').lineWidth(1).stroke(); };
+
+      // Rodapé fixo no fim de CADA página (running footer)
+      // `lineBreak:false` + altura fixa impedem que o rodapé gere paginação.
+      const drawFooter = () => {
+        doc.save();
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('#1a9e5a').text('PES METAL', 45, footerY, { width: 510, align: 'center', lineBreak: false });
+        doc.font('Helvetica').fontSize(7.5).fillColor('#9aa3a1')
+          .text('Caldeiraria · Soldagem · Usinagem', 45, footerY + 11, { width: 510, align: 'center', lineBreak: false })
+          .text(`CNPJ: ${companyCnpj} · ${companyPhone}`, 45, footerY + 21, { width: 510, align: 'center', lineBreak: false })
+          .text(`E-mail: ${companyEmail} · ${companyWebsite}`, 45, footerY + 31, { width: 510, align: 'center', lineBreak: false });
+        doc.restore();
+      };
+      // desenha rodapé na página NOVA logo após criar (síncrono, sem reentrância)
+      const addPageWithFooter = () => {
+        doc.addPage();
+        drawFooter();
+      };
 
       // ===== HEADER: empresa (esquerda) + nº/data (direita) =====
       doc.font('Helvetica-Bold').fontSize(22).fillColor('#1a9e5a').text(companyName.toUpperCase(), 45, 40);
@@ -155,7 +174,7 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       let computedTotal = 0;
 
       const drawTableHeader = () => {
-        if (doc.y + 24 > pageBottom) doc.addPage();
+        if (doc.y + 24 > pageBottom) addPageWithFooter();
         doc.fontSize(9).fillColor('#5c6670').font('Helvetica-Bold');
         doc.text('ITEM', 45, doc.y, { width: 30 });
         doc.text('PRODUTO/SERVIÇO', 80, doc.y, { width: 220 });
@@ -184,7 +203,7 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
           const rowH = Math.max(descH, 12) + 5;
 
           if (doc.y + rowH + 20 > pageBottom) {
-            doc.addPage();
+            addPageWithFooter();
             doc.font('Helvetica-Bold').fontSize(12).fillColor('#1f2328').text(`ORÇAMENTO (continuação)`, 45, doc.y, { width: 510 });
             doc.moveDown(0.4);
             drawTableHeader();
@@ -214,12 +233,27 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
 
       lineGreen(doc.y);
 
-      // ===== TOTAIS =====
+      // ===== TOTAIS + CONDIÇÕES + RODAPÉ (bloco único, pagina junto) =====
       const total = Number(quote.amount) || computedTotal;
       const subtotal = computedTotal;
       const acrescimo = Math.max(0, total - subtotal);
 
-      if (doc.y + 90 > pageBottom) doc.addPage();
+      const deliveryLine =
+        (quote.delivery_date && quote.delivery_text)
+          ? `Prazo de entrega: ${quote.delivery_text} · Entrega prevista: ${fmtDate(quote.delivery_date)}`
+          : quote.delivery_date
+            ? `Entrega prevista: ${fmtDate(quote.delivery_date)}`
+            : quote.delivery_text
+              ? `Prazo de entrega: ${quote.delivery_text}`
+              : '';
+      const obsText = (quote.notes || quote.description || '').replace(/\s+/g, ' ').trim();
+      const obsShown = obsText.length > 360 ? `${obsText.slice(0, 360)}...` : obsText;
+
+      // estatura mínima do bloco final (totais + condições + folga)
+      const closingBlockH = 150 + (deliveryLine ? 14 : 0) + (obsShown ? 4 : 0);
+      if (doc.y + closingBlockH > pageBottom - 8) addPageWithFooter();
+
+      doc.x = 45;
       doc.moveDown(0.7);
       doc.font('Helvetica').fontSize(9.5).fillColor('#1f2328');
       doc.text('SUBTOTAL:', 385, doc.y, { width: 95, align: 'right' });
@@ -232,19 +266,8 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       doc.text('TOTAL:', 385, doc.y, { width: 95, align: 'right' });
       doc.font('Helvetica-Bold').fontSize(12).fillColor('#1a9e5a').text(`R$ ${total.toFixed(2)}`, 485, doc.y - 13, { width: 70, align: 'right' });
 
-      // ===== CONDIÇÕES: prazo de entrega + forma de pg + obs + prazo =====
       doc.x = 45;
-      if (doc.y + 120 > pageBottom) doc.addPage();
       doc.moveDown(1.5);
-
-      const deliveryLine =
-        (quote.delivery_date && quote.delivery_text)
-          ? `Prazo de entrega: ${quote.delivery_text} · Entrega prevista: ${fmtDate(quote.delivery_date)}`
-          : quote.delivery_date
-            ? `Entrega prevista: ${fmtDate(quote.delivery_date)}`
-            : quote.delivery_text
-              ? `Prazo de entrega: ${quote.delivery_text}`
-              : '';
 
       if (deliveryLine) {
         doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text(deliveryLine, 45, doc.y, { width: 510 });
@@ -253,23 +276,11 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
 
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text('FORMA DE PG: A VISTA / NF / BOLETO (A COMBINAR)', 45, doc.y, { width: 510 });
       doc.font('Helvetica').fontSize(9.5).fillColor('#3d434a');
-      const obsText = (quote.notes || quote.description || '').replace(/\s+/g, ' ').trim();
-      const obsShown = obsText.length > 360 ? `${obsText.slice(0, 360)}...` : obsText;
       doc.text(`OBS: ${obsShown}`, 45, doc.y, { width: 510 });
       doc.moveDown(0.4);
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text('PRAZO: 7 DIAS . FRETE:', 45, doc.y, { width: 510 });
 
-      // ===== RODAPÉ (sempre no fim) =====
-      if (doc.y + 70 > pageBottom) doc.addPage();
-      doc.x = 45;
-      doc.moveDown(1.5);
-      line(doc.y);
-      doc.moveDown(0.4);
-      doc.font('Helvetica-Bold').fontSize(10).fillColor('#1a9e5a').text('PES METAL', 45, doc.y, { width: 510, align: 'center' });
-      doc.font('Helvetica').fontSize(8).fillColor('#9aa3a1')
-        .text('Caldeiraria · Soldagem · Usinagem', 45, doc.y, { width: 510, align: 'center' })
-        .text(`CNPJ: ${companyCnpj} · ${companyPhone}`, 45, doc.y, { width: 510, align: 'center' })
-        .text(`E-mail: ${companyEmail} · ${companyWebsite}`, 45, doc.y, { width: 510, align: 'center' });
+      drawFooter();
 
       doc.end();
     } catch (err) {
