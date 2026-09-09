@@ -68,29 +68,38 @@ export const ProjectRepository = {
 
 // === Appointments ===
 export interface AppointmentRow {
-  id: string; lead_id: string | null; user_id: string | null;
-  title: string; type: string; date: string; duration_min: number;
-  notes: string | null; status: string;
+  id: string; lead_id: string | null; contact_id: string | null; quote_id: string | null; user_id: string | null;
+  title: string; type: string; date: string; time: string | null; duration_min: number;
+  notes: string | null; location: string | null; category: string | null; status: string;
   created_at: string; updated_at: string;
 }
 export const AppointmentRepository = {
-  async list(filter: { user_id?: string; lead_id?: string; from?: string; to?: string } = {}): Promise<AppointmentRow[]> {
+  async list(filter: { user_id?: string; lead_id?: string; contact_id?: string; from?: string; to?: string } = {}): Promise<any[]> {
     const where: string[] = ['1=1']; const params: any[] = [];
     if (filter.user_id) { where.push(`a.user_id = $${params.length + 1}`); params.push(filter.user_id); }
     if (filter.lead_id) { where.push(`a.lead_id = $${params.length + 1}`); params.push(filter.lead_id); }
+    if (filter.contact_id) { where.push(`a.contact_id = $${params.length + 1}`); params.push(filter.contact_id); }
     if (filter.from) { where.push(`a.date >= $${params.length + 1}`); params.push(filter.from); }
     if (filter.to) { where.push(`a.date <= $${params.length + 1}`); params.push(filter.to); }
-    return (await q(`SELECT a.* FROM appointments a WHERE ${where.join(' AND ')} ORDER BY a.date ASC`, params)) as AppointmentRow[];
+    return (await q(`SELECT a.*, c.name as contact_name, c.phone as contact_phone, c.custom_name,
+               u.name as user_name, l.name as lead_name, qt.number as quote_number, qt.title as quote_title
+               FROM appointments a
+               LEFT JOIN contacts c ON c.id = a.contact_id
+               LEFT JOIN users u ON u.id = a.user_id
+               LEFT JOIN leads l ON l.id = a.lead_id
+               LEFT JOIN quotes qt ON qt.id = a.quote_id
+               WHERE ${where.join(' AND ')} ORDER BY a.date ASC, a.time ASC NULLS LAST`, params)) as any[];
   },
   async insert(d: Partial<AppointmentRow> & Pick<AppointmentRow, 'title' | 'type' | 'date'>): Promise<string> {
     const id = d.id || `apt_${crypto.randomUUID().slice(0, 16)}`;
-    await qe(`INSERT INTO appointments (id, lead_id, user_id, title, type, date, duration_min, notes, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [id, d.lead_id ?? null, d.user_id ?? null, d.title, d.type, d.date, d.duration_min ?? 60, d.notes ?? null, d.status ?? 'scheduled']);
+    await qe(`INSERT INTO appointments (id, lead_id, contact_id, quote_id, user_id, title, type, date, time, duration_min, notes, location, category, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [id, d.lead_id ?? null, d.contact_id ?? null, d.quote_id ?? null, d.user_id ?? null, d.title, d.type, d.date,
+       d.time ?? null, d.duration_min ?? 60, d.notes ?? null, d.location ?? null, d.category ?? null, d.status ?? 'scheduled']);
     return id;
   },
   async update(id: string, f: Partial<AppointmentRow>): Promise<void> {
     const sets: string[] = []; const params: any[] = [];
-    for (const k of ['title','type','date','duration_min','notes','status','user_id','lead_id'] as const) {
+    for (const k of ['title','type','date','time','duration_min','notes','status','user_id','lead_id','contact_id','quote_id','location','category'] as const) {
       if (k in f) { sets.push(`${k} = $${params.length + 1}`); params.push((f as any)[k]); }
     }
     if (!sets.length) return;
@@ -139,16 +148,16 @@ export const QuoteRepository = {
   async insert(d: any): Promise<{ id: string; number: string }> {
     const id = d.id || `q_${crypto.randomUUID().slice(0, 16)}`;
     const number = d.number || `ORC-${Date.now().toString().slice(-6)}`;
-    await qe(`INSERT INTO quotes (id, number, lead_id, user_id, title, description, amount, valid_until, status, notes, items, contact_id, conversation_id)
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+    await qe(`INSERT INTO quotes (id, number, lead_id, user_id, title, description, amount, valid_until, status, notes, items, contact_id, conversation_id, delivery_text, delivery_date)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [id, number, d.lead_id ?? null, d.user_id ?? null, d.title, d.description ?? null, d.amount ?? 0,
        d.valid_until ?? null, d.status ?? 'draft', d.notes ?? null, d.items ? JSON.stringify(d.items) : null,
-       d.contact_id ?? null, d.conversation_id ?? null]);
+       d.contact_id ?? null, d.conversation_id ?? null, d.delivery_text ?? null, d.delivery_date ?? null]);
     return { id, number };
   },
   async update(id: string, f: any): Promise<void> {
     const sets: string[] = []; const params: any[] = [];
-    for (const k of ['title','description','amount','valid_until','status','notes','contact_id','conversation_id']) {
+    for (const k of ['title','description','amount','valid_until','status','notes','contact_id','conversation_id','delivery_text','delivery_date']) {
       if (k in f) { sets.push(`${k} = $${params.length + 1}`); params.push(f[k]); }
     }
     if ('items' in f) { sets.push(`items = $${params.length + 1}`); params.push(JSON.stringify(f.items || [])); }

@@ -5,6 +5,7 @@
  */
 import { q, q1, qe } from '../lib/db.js';
 import { LeadEventRepository } from '../repositories/miscRepos.js';
+import { publish } from './realtime.js';
 
 export interface CreateNotificationInput {
   type: string;
@@ -52,7 +53,8 @@ export async function createNotification(input: CreateNotificationInput): Promis
   const id = `notif_${crypto.randomUUID().slice(0, 16)}`;
   await qe(`INSERT INTO notifications (id, user_id, type, title, body, data, read)
               VALUES ($1, $2, $3, $4, $5, $6, 0)`,
-    [id, input.userId ?? null, type, input.title, input.body ?? null, dataStr]);
+    [id, input.userId ?? null, type, input.title ?? '', input.body ?? null, dataStr]);
+  publish('notifications', 'created', { id, userId: input.userId });
 
   if (input.leadId && input.eventType) {
     const already = await q1(`

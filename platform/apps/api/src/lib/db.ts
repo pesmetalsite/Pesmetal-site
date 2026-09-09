@@ -99,6 +99,12 @@ export async function migrate(): Promise<void> {
     `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS address_zip text`,
     `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS address_neighborhood text`,
     `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS state_registration text`,
+    `ALTER TABLE quotes ADD COLUMN IF NOT EXISTS delivery_text text`,
+    `ALTER TABLE quotes ADD COLUMN IF NOT EXISTS delivery_date text`,
+    `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS contact_id text REFERENCES contacts(id) ON DELETE SET NULL`,
+    `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS quote_id text REFERENCES quotes(id) ON DELETE SET NULL`,
+    `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS location text`,
+    `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS category text`,
   ];
   for (const sql of alters) {
     try {

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { Card, Empty, Loading } from '@/components/ui/Card'
@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { api, getToken } from '@/lib/api'
+import { api, getToken, apiCached, invalidateCache } from '@/lib/api'
+import { useRealtime } from '@/lib/realtime'
 import { formatDate } from '@/lib/utils'
-import { Search, Phone, Building2, FileText, MessageSquare, Pencil, UserPlus, Save, X } from 'lucide-react'
+import { Search, Phone, Building2, FileText, MessageSquare, Pencil, UserPlus, Save, Trash2 } from 'lucide-react'
 
 interface Contact {
   id: string
@@ -51,18 +52,25 @@ export default function ClientesPage() {
     return () => clearTimeout(t)
   }, [searchInput])
 
-  const loadContacts = async () => {
-    setLoading(true)
+  const loadContacts = useCallback(async (background = false) => {
+    if (!background) setLoading(true)
     try {
-      const r = await api(`/contacts?limit=200${search ? `&search=${encodeURIComponent(search)}` : ''}`, {}, getToken()!)
+      const r = await apiCached(`/contacts?limit=200${search ? `&search=${encodeURIComponent(search)}` : ''}`, getToken()!)
       setContacts(r.contacts || [])
-    } catch { setContacts([]) }
-    finally { setLoading(false) }
-  }
+    } catch { /* mantém cache/stale */ }
+    finally { if (!background) setLoading(false) }
+  }, [search])
 
   useEffect(() => {
     loadContacts()
-  }, [search])
+  }, [search, loadContacts])
+
+  // realtime: cliente criado/atualizado reflete automaticamente
+  useRealtime((ev) => {
+    if (ev.entity !== 'contacts') return
+    invalidateCache('/contacts')
+    loadContacts(true)
+  })
 
   const openCreate = () => {
     setEditingContact(null)
@@ -91,12 +99,24 @@ export default function ClientesPage() {
       } else {
         await api('/contacts', { method: 'POST', body: JSON.stringify(form) }, getToken()!)
       }
+      invalidateCache('/contacts')
       setEditorOpen(false)
       loadContacts()
     } catch (e: any) {
       alert(e.message || 'Erro ao salvar cliente')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDelete = async (c: Contact) => {
+    if (!confirm(`Excluir cliente "${c.name || c.custom_name || c.phone}"? Os orçamentos vinculados serão preservados.`)) return
+    try {
+      await api(`/contacts/${c.id}`, { method: 'DELETE' }, getToken()!)
+      invalidateCache('/contacts')
+      loadContacts()
+    } catch (e: any) {
+      alert(e.message || 'Erro ao excluir cliente')
     }
   }
 
@@ -164,9 +184,14 @@ export default function ClientesPage() {
                       </div>
                     )}
                   </div>
-                  <button className="p-1.5 rounded hover:bg-bg-2 text-text-dim hover:text-brand" title="Editar cliente" onClick={() => openEdit(c)}>
-                    <Pencil size={14} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button className="p-1.5 rounded hover:bg-bg-2 text-text-dim hover:text-brand" title="Editar cliente" onClick={() => openEdit(c)}>
+                      <Pencil size={14} />
+                    </button>
+                    <button className="p-1.5 rounded hover:bg-bg-2 text-text-dim hover:text-danger" title="Excluir cliente" onClick={() => handleDelete(c)}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1 text-xs text-text-dim">

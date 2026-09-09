@@ -200,6 +200,8 @@ CREATE TABLE IF NOT EXISTS automations (
 CREATE TABLE IF NOT EXISTS appointments (
     id text PRIMARY KEY,
     lead_id text REFERENCES leads(id) ON DELETE CASCADE,
+    contact_id text REFERENCES contacts(id) ON DELETE SET NULL,
+    quote_id text REFERENCES quotes(id) ON DELETE SET NULL,
     user_id text REFERENCES users(id),
     title text NOT NULL,
     type text DEFAULT 'meeting',
@@ -207,6 +209,8 @@ CREATE TABLE IF NOT EXISTS appointments (
     time text,
     duration_min integer DEFAULT 60,
     notes text,
+    location text,
+    category text,
     status text DEFAULT 'scheduled',
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
@@ -230,6 +234,8 @@ CREATE TABLE IF NOT EXISTS quotes (
     retention_expires_at timestamptz NOT NULL DEFAULT (now() + interval '15 days'),
     sent_at timestamptz,
     sent_by text REFERENCES users(id),
+    delivery_text text,
+    delivery_date text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );

@@ -27,6 +27,7 @@ import { webhookHandler } from './routes/webhook.js';
 import { uploadRouter } from './routes/upload.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { contactsRouter } from './routes/contacts.js';
+import { realtimeRouter } from './routes/realtime.js';
 
 const PORT = parseInt(process.env.PORT || '4000');
 const START = Date.now();
@@ -50,6 +51,7 @@ const routes: Array<{ prefix: string; handler: (req: any, res: any, url: URL) =>
   { prefix: '/appointments', handler: appointmentsRouter },
   { prefix: '/quotes', handler: quotesRouter },
   { prefix: '/contacts', handler: contactsRouter },
+  { prefix: '/realtime', handler: realtimeRouter },
   { prefix: '/settings', handler: settingsRouter },
   { prefix: '/dashboard', handler: dashboardRouter },
   { prefix: '/notifications', handler: notificationsRouter },

@@ -19,6 +19,7 @@ import { q, q1 } from '../lib/db.js';
 import { Evolution } from '../services/evolution.js';
 import { createNotification } from '../services/notifications.js';
 import { logger } from '../lib/logger.js';
+import { publish } from '../services/realtime.js';
 
 /** Lock em memória contra duplo-clique no envio de um mesmo orçamento. */
 const sendingLocks = new Set<string>();
@@ -86,7 +87,11 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       const companyAddress = company.company_address || '';
       const companyCnpj = company.company_cnpj || '39.350.593.0001/51';
 
-      // ===== HEADER: empresa (bloco esquerdo) + nº/data (bloco direito) =====
+      const pageBottom = doc.page.height - doc.page.margins.bottom;
+      const line = (y: number) => { doc.moveTo(45, y).lineTo(555, y).strokeColor('#e5e8eb').lineWidth(1).stroke(); };
+      const lineGreen = (y: number) => { doc.moveTo(45, y).lineTo(555, y).strokeColor('#1a9e5a').lineWidth(1).stroke(); };
+
+      // ===== HEADER: empresa (esquerda) + nº/data (direita) =====
       doc.font('Helvetica-Bold').fontSize(22).fillColor('#1a9e5a').text(companyName.toUpperCase(), 45, 40);
       doc.font('Helvetica').fontSize(8).fillColor('#5c6670')
         .text(`CNPJ: ${companyCnpj}`, 45, 70, { width: 260 })
@@ -101,9 +106,9 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
         .text(`Emitido em: ${fmtDate(quote.created_at)}`, 315, 86, { align: 'right', width: 240 })
         .text(`Válido até: ${quote.valid_until ? fmtDate(quote.valid_until) : fmtDate(new Date(Date.now() + 15 * 86400000).toISOString())}`, 315, 100, { align: 'right', width: 240 });
 
-      doc.moveTo(45, 132).lineTo(555, 132).strokeColor('#e5e8eb').lineWidth(1).stroke();
+      line(132);
 
-      // ===== CLIENTE (modelo real) =====
+      // ===== CLIENTE (layout adaptativo, sem campos vazios feios) =====
       const customerName = quote.contact_custom_name || quote.contact_name || quote.lead_name || '';
       const customerPhone = quote.contact_phone || '';
       const customerEmail = quote.contact_email || '';
@@ -115,92 +120,111 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       const customerState = quote.address_state || '';
       const customerZip = quote.address_zip || '';
 
+      const clientFields: Array<[string, string]> = ([
+        ['Nome/Razão Social', customerName],
+        ['Telefone', customerPhone],
+        ['E-mail', customerEmail],
+        ['CPF/CNPJ', customerDoc],
+        ['RG/IE', customerStateReg],
+        ['Endereço', [customerLine, customerNeighborhood, [customerCity, customerState].filter(Boolean).join(' - '), customerZip].filter(Boolean).join(', ')],
+      ] as Array<[string, string]>).filter(([, v]) => v && v.trim());
+
       doc.moveDown(1.6);
       doc.font('Helvetica-Bold').fontSize(12).fillColor('#1f2328').text('CLIENTE');
       doc.moveDown(0.3);
 
-      // 2 colunas × 5 linhas (modelo real economiza espaço vertical)
-      const leftCol: Array<[string, string]> = [
-        ['NOME', customerName],
-        ['EMAIL', customerEmail],
-        ['RG/IE', customerStateReg],
-        ['CIDADE', customerCity],
-        ['ESTADO', customerState],
-      ];
-      const rightCol: Array<[string, string]> = [
-        ['TELEFONE', customerPhone],
-        ['CPF/CNPJ', customerDoc],
-        ['ENDEREÇO', customerLine],
-        ['BAIRRO', customerNeighborhood],
-        ['CEP', customerZip],
-      ];
-      for (let i = 0; i < 5; i++) {
-        const y = doc.y;
-        const [l1, v1] = leftCol[i];
-        const [l2, v2] = rightCol[i];
-        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#5c6670').text(l1, 45, y, { width: 85 });
-        doc.font('Helvetica').fontSize(8.5).fillColor('#1f2328').text(v1 || '—', 132, y, { width: 145 });
-        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#5c6670').text(l2, 305, y, { width: 85 });
-        doc.font('Helvetica').fontSize(8.5).fillColor('#1f2328').text(v2 || '—', 392, y, { width: 160 });
-        doc.y = y + 13;
-      }
+      clientFields.forEach(([label, value]) => {
+        const rowY = doc.y;
+        // mede altura real do valor (wrap) e da label para a linha crescer
+        const labelH = doc.font('Helvetica-Bold').fontSize(8.5).heightOfString(label, { width: 85 });
+        const valueH = doc.font('Helvetica').fontSize(9).heightOfString(value, { width: 380 });
+        const rowH = Math.max(labelH, valueH) + 6;
+        doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#5c6670').text(label, 45, rowY, { width: 85 });
+        doc.font('Helvetica').fontSize(9).fillColor('#1f2328').text(value, 160, rowY, { width: 380 });
+        doc.y = rowY + rowH;
+      });
 
-      doc.moveTo(45, doc.y).lineTo(555, doc.y).strokeColor('#e5e8eb').stroke();
+      line(doc.y);
 
-      // ===== ORÇAMENTO: tabela de itens (modelo real) =====
+      // ===== ORÇAMENTO: tabela de itens com altura dinâmica + paginação =====
       doc.x = 45;
       doc.moveDown(1.1);
       doc.font('Helvetica-Bold').fontSize(12).fillColor('#1f2328').text('ORÇAMENTO', 45, doc.y, { width: 510 });
       doc.moveDown(0.4);
 
       let computedTotal = 0;
-      const tableTop = doc.y;
-      doc.fontSize(9).fillColor('#5c6670').font('Helvetica-Bold');
-      doc.text('ITEM', 45, tableTop, { width: 40 });
-      doc.text('PRODUTO/SERVIÇO', 90, tableTop, { width: 220 });
-      doc.text('QUANT', 315, tableTop, { width: 45 });
-      doc.text('UNI', 365, tableTop, { width: 35 });
-      doc.text('VALOR', 405, tableTop, { width: 150 });
-      doc.moveTo(45, tableTop + 14).lineTo(555, tableTop + 14).strokeColor('#1a9e5a').lineWidth(1).stroke();
 
-      doc.font('Helvetica').fontSize(9).fillColor('#1f2328');
-      items.forEach((item: any, idx: number) => {
-        const qty = Number(item.quantity ?? item.qty ?? 1);
-        const unit = Number(item.unit_price ?? item.price ?? 0);
-        const subtotal = qty * unit;
-        computedTotal += subtotal;
-        const rowY = doc.y + 5;
-        doc.text(String(idx + 1), 45, rowY, { width: 40 })
-          .text(String(item.description ?? '-'), 90, rowY, { width: 220 })
-          .text(String(qty), 315, rowY, { width: 45, align: 'center' })
-          .text(String(item.unit ?? ''), 365, rowY, { width: 35, align: 'center' })
-          .text(`R$ ${subtotal.toFixed(2)}`, 405, rowY, { width: 150, align: 'right' });
-        doc.y = rowY + 14;
-      });
+      const drawTableHeader = () => {
+        if (doc.y + 24 > pageBottom) doc.addPage();
+        doc.fontSize(9).fillColor('#5c6670').font('Helvetica-Bold');
+        doc.text('ITEM', 45, doc.y, { width: 30 });
+        doc.text('PRODUTO/SERVIÇO', 80, doc.y, { width: 220 });
+        doc.text('QTD', 305, doc.y, { width: 40, align: 'center' });
+        doc.text('UN', 350, doc.y, { width: 35, align: 'center' });
+        doc.text('VLR UNIT.', 390, doc.y, { width: 75, align: 'right' });
+        doc.text('SUBTOTAL', 470, doc.y, { width: 85, align: 'right' });
+        doc.y += 14;
+        lineGreen(doc.y);
+        doc.y += 4;
+      };
 
-      // linhas vazias para preencher até 8 itens (adaptativo ao espaço restante)
-      const pageHeight = doc.page.height - doc.page.margins.bottom;
-      const bottomBlock = 265; // espaço reservado p/ totais + condições + rodapé
-      const maxEmpty = Math.max(0, Math.floor((pageHeight - bottomBlock - doc.y) / 14));
-      const emptyRows = Math.max(0, Math.min(8 - items.length, maxEmpty));
-      for (let i = 0; i < emptyRows; i++) {
-        const rowY = doc.y + 5;
-        doc.text(String(items.length + i + 1), 45, rowY, { width: 40 });
-        doc.y = rowY + 14;
+      if (items.length === 0) {
+        drawTableHeader();
+        doc.font('Helvetica').fontSize(9).fillColor('#6b7280').text('Nenhum item cadastrado.', 80, doc.y, { width: 400 });
+        doc.y += 16;
+      } else {
+        items.forEach((item: any, idx: number) => {
+          const qty = Number(item.quantity ?? item.qty ?? 1);
+          const unit = Number(item.unit_price ?? item.price ?? 0);
+          const subtotal = qty * unit;
+          computedTotal += subtotal;
+
+          // altura da descrição (wrap) define a altura da linha
+          const descH = doc.font('Helvetica').fontSize(9).heightOfString(String(item.description ?? '-'), { width: 220 });
+          const rowH = Math.max(descH, 12) + 5;
+
+          if (doc.y + rowH + 20 > pageBottom) {
+            doc.addPage();
+            doc.font('Helvetica-Bold').fontSize(12).fillColor('#1f2328').text(`ORÇAMENTO (continuação)`, 45, doc.y, { width: 510 });
+            doc.moveDown(0.4);
+            drawTableHeader();
+          }
+
+          const rowY = doc.y;
+          doc.font('Helvetica').fontSize(9).fillColor('#1f2328');
+          doc.text(String(idx + 1), 45, rowY, { width: 30 });
+          doc.text(String(item.description ?? '-'), 80, rowY, { width: 220 });
+          doc.text(String(qty), 305, rowY, { width: 40, align: 'center' });
+          doc.text(String(item.unit ?? ''), 350, rowY, { width: 35, align: 'center' });
+          doc.text(`R$ ${unit.toFixed(2)}`, 390, rowY, { width: 75, align: 'right' });
+          doc.text(`R$ ${subtotal.toFixed(2)}`, 470, rowY, { width: 85, align: 'right' });
+          doc.y = rowY + rowH;
+        });
+
+        // linhas vazias até completar visualmente (sem estourar)
+        const maxEmpty = Math.max(0, Math.floor((pageBottom - 180 - doc.y) / 14));
+        const emptyRows = Math.max(0, Math.min(8 - items.length, maxEmpty));
+        for (let i = 0; i < emptyRows; i++) {
+          const rowY = doc.y;
+          doc.font('Helvetica').fontSize(9).fillColor('#b9c2cc');
+          doc.text(String(items.length + i + 1), 45, rowY, { width: 30 });
+          doc.y = rowY + 14;
+        }
       }
 
-      doc.moveTo(45, doc.y).lineTo(555, doc.y).strokeColor('#1a9e5a').lineWidth(1).stroke();
+      lineGreen(doc.y);
 
-      // ===== TOTAIS (modelo real: SUBTOTAL / ACRÉSCIMO / TOTAL) =====
+      // ===== TOTAIS =====
       const total = Number(quote.amount) || computedTotal;
       const subtotal = computedTotal;
       const acrescimo = Math.max(0, total - subtotal);
+
+      if (doc.y + 90 > pageBottom) doc.addPage();
       doc.moveDown(0.7);
       doc.font('Helvetica').fontSize(9.5).fillColor('#1f2328');
       doc.text('SUBTOTAL:', 385, doc.y, { width: 95, align: 'right' });
       doc.font('Helvetica-Bold').text(`R$ ${subtotal.toFixed(2)}`, 485, doc.y - 12, { width: 70, align: 'right' });
       doc.moveDown(0.5);
-      doc.font('Helvetica').fontSize(9.5).fillColor('#1f2328');
       doc.text('ACRÉSCIMO:', 385, doc.y, { width: 95, align: 'right' });
       doc.font('Helvetica-Bold').text(`R$ ${acrescimo.toFixed(2)}`, 485, doc.y - 12, { width: 70, align: 'right' });
       doc.moveDown(0.5);
@@ -208,9 +232,25 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       doc.text('TOTAL:', 385, doc.y, { width: 95, align: 'right' });
       doc.font('Helvetica-Bold').fontSize(12).fillColor('#1a9e5a').text(`R$ ${total.toFixed(2)}`, 485, doc.y - 13, { width: 70, align: 'right' });
 
-      // ===== CONDIÇÕES (FORMA DE PG / OBS / PRAZO / FRETE) =====
+      // ===== CONDIÇÕES: prazo de entrega + forma de pg + obs + prazo =====
       doc.x = 45;
+      if (doc.y + 120 > pageBottom) doc.addPage();
       doc.moveDown(1.5);
+
+      const deliveryLine =
+        (quote.delivery_date && quote.delivery_text)
+          ? `Prazo de entrega: ${quote.delivery_text} · Entrega prevista: ${fmtDate(quote.delivery_date)}`
+          : quote.delivery_date
+            ? `Entrega prevista: ${fmtDate(quote.delivery_date)}`
+            : quote.delivery_text
+              ? `Prazo de entrega: ${quote.delivery_text}`
+              : '';
+
+      if (deliveryLine) {
+        doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text(deliveryLine, 45, doc.y, { width: 510 });
+        doc.moveDown(0.4);
+      }
+
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text('FORMA DE PG: A VISTA / NF / BOLETO (A COMBINAR)', 45, doc.y, { width: 510 });
       doc.font('Helvetica').fontSize(9.5).fillColor('#3d434a');
       const obsText = (quote.notes || quote.description || '').replace(/\s+/g, ' ').trim();
@@ -219,10 +259,11 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       doc.moveDown(0.4);
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text('PRAZO: 7 DIAS . FRETE:', 45, doc.y, { width: 510 });
 
-      // ===== RODAPÉ =====
+      // ===== RODAPÉ (sempre no fim) =====
+      if (doc.y + 70 > pageBottom) doc.addPage();
       doc.x = 45;
-      doc.moveDown(2);
-      doc.moveTo(45, doc.y).lineTo(555, doc.y).strokeColor('#e5e8eb').stroke();
+      doc.moveDown(1.5);
+      line(doc.y);
       doc.moveDown(0.4);
       doc.font('Helvetica-Bold').fontSize(10).fillColor('#1a9e5a').text('PES METAL', 45, doc.y, { width: 510, align: 'center' });
       doc.font('Helvetica').fontSize(8).fillColor('#9aa3a1')
@@ -267,6 +308,7 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
     });
     if (body.lead_id) await LeadEventRepository.insert({ lead_id: body.lead_id, user_id: user.id, type: 'quote_created', description: `Orçamento ${number} criado` });
     await createNotification({ type: 'quote_created', title: 'Novo orçamento', body: `${body.title} (${number})`, data: { quote_id: id }, userId: user.id });
+    publish('quotes', 'created', { id, number });
     return json(res, 201, { id, number });
   }
 
@@ -288,10 +330,12 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
       items,
       status: body.status && ['draft', 'sent', 'accepted', 'expired'].includes(body.status) ? body.status : undefined,
     });
+    publish('quotes', 'updated', { id: idMatch[1] });
     return json(res, 200, { ok: true });
   }
   if (idMatch && method === 'DELETE') {
     await QuoteRepository.update(idMatch[1], { status: 'deleted' });
+    publish('quotes', 'deleted', { id: idMatch[1] });
     return json(res, 200, { ok: true });
   }
 
@@ -414,6 +458,7 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
         conversation: quote.conversation_id, user: user.id, instance: instanceName || 'default',
         evolutionKey: sendResult?.key?.id || null,
       });
+      publish('quotes', 'updated', { id: quote.id, status: 'sent' });
       return json(res, 200, { ok: true, status: 'sent', fileName, key: sendResult?.key?.id || null });
     } finally {
       sendingLocks.delete(sendMatch[1]);
@@ -431,6 +476,7 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
       amount: original.amount, valid_until: original.valid_until, status: 'draft', notes: original.notes,
       items: typeof original.items === 'string' ? JSON.parse(original.items || '[]') : (original.items || []),
     });
+    publish('quotes', 'created', { id, number });
     return json(res, 201, { id, number });
   }
 

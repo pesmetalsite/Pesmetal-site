@@ -7,6 +7,8 @@ import { authenticate } from '../lib/auth.js';
 import { ContactRepository } from '../repositories/contactRepo.js';
 import { ApiError, asyncHandler } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
+import { publish } from '../services/realtime.js';
+import { qe } from '../lib/db.js';
 
 function normalizePhone(raw: string): string {
   return String(raw || '').replace(/\D/g, '');
@@ -50,6 +52,7 @@ export const contactsRouter = asyncHandler(async (req, res, url) => {
       state_registration: body?.state_registration ? String(body.state_registration).trim() : null,
     });
     logger.info('contact created', { id, user_id: user.id });
+    publish('contacts', 'created', { id });
     return json(res, 201, { id, existing: false });
   }
 
@@ -80,6 +83,15 @@ export const contactsRouter = asyncHandler(async (req, res, url) => {
     }
     await ContactRepository.update(contact.id, fields);
     logger.info('contact updated', { id: contact.id, user_id: user.id });
+    publish('contacts', 'updated', { id: contact.id });
+    return json(res, 200, { ok: true });
+  }
+
+  // DELETE /contacts/:id — exclui cliente (admin/gestor)
+  if (idMatch && method === 'DELETE') {
+    if (user.role === 'atendente') throw ApiError.forbidden('Apenas admin/gestor pode excluir clientes');
+    await qe(`DELETE FROM contacts WHERE id = $1`, [idMatch[1]]);
+    publish('contacts', 'deleted', { id: idMatch[1] });
     return json(res, 200, { ok: true });
   }
 

@@ -9,6 +9,7 @@ import { moveLead } from '../services/crm.js';
 import { LeadEventRepository } from '../repositories/miscRepos.js';
 import { CreateStageSchema, UpdateStageSchema, MoveLeadSchema, parseBody } from '../lib/validators.js';
 import { ApiError, asyncHandler } from '../lib/errors.js';
+import { publish } from '../services/realtime.js';
 
 export const kanbanRouter = asyncHandler(async (req, res, url) => {
   const user = await authenticate(req);
@@ -57,6 +58,7 @@ export const kanbanRouter = asyncHandler(async (req, res, url) => {
     const body = parseBody(MoveLeadSchema, await readBody(req));
     const ok = await moveLead(body.lead_id, body.stage_id, user.id);
     if (!ok) throw ApiError.notFound('Lead ou stage');
+    publish('leads', 'updated', { id: body.lead_id, stage_id: body.stage_id });
     return json(res, 200, { ok: true });
   }
 

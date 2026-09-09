@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { Card, Empty, Loading } from '@/components/ui/Card'
@@ -7,10 +7,12 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import { api, getToken, API_URL } from '@/lib/api'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { api, getToken, API_URL, invalidateCache } from '@/lib/api'
+import { useRealtime } from '@/lib/realtime'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
-  Search, Plus, Pencil, FileDown, Send, Copy, Trash2, X, Save, UserPlus, ChevronDown,
+  Search, Plus, Pencil, FileDown, Send, Copy, Trash2, X, Save, UserPlus, Check, RefreshCw, Calendar,
 } from 'lucide-react'
 
 interface QuoteItem {
@@ -18,6 +20,7 @@ interface QuoteItem {
   description: string
   quantity: number
   unit_price: number
+  unit?: string
 }
 
 interface Contact {
@@ -44,6 +47,8 @@ interface Quote {
   status: string
   amount: number
   valid_until?: string
+  delivery_text?: string
+  delivery_date?: string
   created_at: string
   updated_at?: string
   contact_id?: string
@@ -110,9 +115,10 @@ async function downloadPdf(quoteId: string, fileName?: string) {
   setTimeout(() => URL.revokeObjectURL(url), 3000)
 }
 
+type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
+
 export default function OrcamentosPage() {
   const router = useRouter()
-  const [queryParams, setQueryParams] = useState<URLSearchParams | null>(null)
 
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [loading, setLoading] = useState(true)
@@ -131,26 +137,35 @@ export default function OrcamentosPage() {
   const [sendMsg, setSendMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
+  // autosave state
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveInFlight = useRef(false)
+  const pendingSave = useRef(false)
+
   // editor form state
   const [form, setForm] = useState({
     title: '',
     description: '',
     valid_until: '',
+    delivery_text: '',
+    delivery_date: '',
     status: 'draft',
     notes: '',
     contact_id: '',
     conversation_id: '',
   })
   const [items, setItems] = useState<QuoteItem[]>([
-    { description: '', quantity: 1, unit_price: 0 },
+    { description: '', quantity: 1, unit_price: 0, unit: '' },
   ])
 
-  // cliente: busca + seleção + criação
+  // cliente: busca + seleção + criação + edição
   const [contacts, setContacts] = useState<Contact[]>([])
   const [contactSearch, setContactSearch] = useState('')
   const [contactPickerOpen, setContactPickerOpen] = useState(false)
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [newContactMode, setNewContactMode] = useState(false)
+  const [editContactMode, setEditContactMode] = useState(false)
   const [newContact, setNewContact] = useState({
     name: '', phone: '', email: '', company: '', document: '',
     address_line: '', address_city: '', address_state: '', address_zip: '',
@@ -167,14 +182,14 @@ export default function OrcamentosPage() {
     return () => clearTimeout(t)
   }, [searchInput])
 
-  const loadQuotes = async () => {
-    setLoading(true)
+  const loadQuotes = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true)
     try {
       const r = await api('/quotes?limit=200', {}, getToken()!)
       setQuotes(r.quotes || r.data || (Array.isArray(r) ? r : []))
-    } catch { setQuotes([]) }
-    finally { setLoading(false) }
-  }
+    } catch { /* silencioso */ }
+    finally { if (showLoading) setLoading(false) }
+  }, [])
 
   const searchContacts = async (q: string) => {
     try {
@@ -184,35 +199,50 @@ export default function OrcamentosPage() {
   }
 
   useEffect(() => {
-    loadQuotes()
+    loadQuotes(true)
     searchContacts('')
     const params = new URLSearchParams(window.location.search)
-    setQueryParams(params)
     if (params.get('novo') === '1') {
       openEditorFromParams(params)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const openEditorFromParams = (params: URLSearchParams) => {
+  // realtime: orçamento criado/atualizado reflete automaticamente
+  useRealtime((ev) => {
+    if (ev.entity !== 'quotes') return
+    invalidateCache('/quotes')
+    loadQuotes()
+  })
+
+  const resetEditor = (params?: URLSearchParams) => {
     setEditing(null)
+    setSelectedContact(null)
+    setSaveState('idle')
     setForm({
       title: '',
       description: '',
       valid_until: '',
+      delivery_text: '',
+      delivery_date: '',
       status: 'draft',
       notes: '',
-      contact_id: params.get('contact_id') || '',
-      conversation_id: params.get('conversation_id') || '',
+      contact_id: params?.get('contact_id') || '',
+      conversation_id: params?.get('conversation_id') || '',
     })
-    const name = params.get('contact_name') || ''
-    const phone = params.get('contact_phone') || ''
-    if (name) setForm(f => ({ ...f, title: name ? `Orçamento — ${name}` : '' }))
-    setItems([{ description: '', quantity: 1, unit_price: 0 }])
-    if (params.get('contact_id')) {
+    setItems([{ description: '', quantity: 1, unit_price: 0, unit: '' }])
+    if (params?.get('contact_id')) {
+      const name = params.get('contact_name') || ''
+      const phone = params.get('contact_phone') || ''
       setSelectedContact({ id: params.get('contact_id')!, name, phone })
-      setNewContact(nc => ({ ...nc, name, phone }))
+      setNewContact({ name, phone, email: '', company: '', document: '', address_line: '', address_city: '', address_state: '', address_zip: '', address_neighborhood: '', state_registration: '' })
+      if (name) setForm(f => ({ ...f, title: `Orçamento — ${name}` }))
     }
     setEditorOpen(true)
+  }
+
+  const openEditorFromParams = (params: URLSearchParams) => {
+    resetEditor(params)
   }
 
   const openEditorEdit = (q: Quote) => {
@@ -221,36 +251,34 @@ export default function OrcamentosPage() {
       title: q.title || '',
       description: q.description || '',
       valid_until: q.valid_until ? q.valid_until.split('T')[0] : '',
+      delivery_text: q.delivery_text || '',
+      delivery_date: q.delivery_date ? q.delivery_date.split('T')[0] : '',
       status: q.status || 'draft',
       notes: q.notes || '',
       contact_id: q.contact_id || '',
       conversation_id: q.conversation_id || '',
     })
-    setItems(q.items && q.items.length > 0 ? q.items : [{ description: '', quantity: 1, unit_price: 0 }])
+    setItems(q.items && q.items.length > 0 ? q.items.map(i => ({ ...i, unit: i.unit || '' })) : [{ description: '', quantity: 1, unit_price: 0, unit: '' }])
     if (q.contact_id) {
       setSelectedContact({
         id: q.contact_id, name: q.contact_name, phone: q.contact_phone,
         email: q.contact_email, company: q.contact_company, document: q.contact_document,
+        address_line: q.address_line, address_city: q.address_city,
+        address_state: q.address_state, address_zip: q.address_zip,
+        address_neighborhood: q.address_neighborhood, state_registration: q.state_registration,
       })
-      setNewContact(nc => ({
-        ...nc,
-        name: q.contact_name || '', phone: q.contact_phone || '',
-        email: q.contact_email || '', company: q.contact_company || '', document: q.contact_document || '',
-        address_line: q.address_line || '', address_city: q.address_city || '',
-        address_state: q.address_state || '', address_zip: q.address_zip || '',
-        address_neighborhood: q.address_neighborhood || '', state_registration: q.state_registration || '',
-      }))
     }
+    setSaveState('idle')
     setEditorOpen(true)
   }
 
-  const handleSave = async () => {
-    if (!form.title.trim()) { alert('Título é obrigatório'); return }
-    setSaving(true)
-    const body = {
+  const buildBody = useCallback(() => {
+    return {
       title: form.title,
       description: form.description || undefined,
       valid_until: form.valid_until || undefined,
+      delivery_text: form.delivery_text || undefined,
+      delivery_date: form.delivery_date || undefined,
       status: form.status,
       notes: form.notes || undefined,
       contact_id: form.contact_id || undefined,
@@ -258,11 +286,45 @@ export default function OrcamentosPage() {
       items: items.filter(i => i.description.trim()),
       amount: total,
     }
+  }, [form, items, total])
+
+  /** Autosave com debounce + retry seguro. Idempotente via PUT. */
+  const scheduleAutosave = useCallback(() => {
+    if (!editing?.id) return
+    setSaveState('dirty')
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(async () => {
+      if (saveInFlight.current) { pendingSave.current = true; return }
+      saveInFlight.current = true
+      setSaveState('saving')
+      try {
+        await api(`/quotes/${editing.id}`, { method: 'PUT', body: JSON.stringify(buildBody()) }, getToken()!)
+        invalidateCache('/quotes')
+        setSaveState('saved')
+        pendingSave.current = false
+      } catch {
+        setSaveState('error')
+        // retry seguro após 3s
+        setTimeout(() => { if (editing?.id) scheduleAutosave() }, 3000)
+      } finally {
+        saveInFlight.current = false
+      }
+    }, 900)
+  }, [editing?.id, buildBody])
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { alert('Título é obrigatório'); return }
+    setSaving(true)
+    const body = buildBody()
     try {
       if (editing) {
         await api(`/quotes/${editing.id}`, { method: 'PUT', body: JSON.stringify(body) }, getToken()!)
+        invalidateCache('/quotes')
       } else {
-        await api('/quotes', { method: 'POST', body: JSON.stringify(body) }, getToken()!)
+        const r = await api('/quotes', { method: 'POST', body: JSON.stringify(body) }, getToken()!)
+        invalidateCache('/quotes')
+        // vira edição para ativar autosave
+        setEditing(prev => ({ ...(prev as Quote), id: r.id, number: r.number }))
       }
       setEditorOpen(false)
       loadQuotes()
@@ -272,6 +334,13 @@ export default function OrcamentosPage() {
       setSaving(false)
     }
   }
+
+  // autosave dispara em qualquer mudança de form/items enquanto editando
+  useEffect(() => {
+    if (editing?.id && editorOpen) scheduleAutosave()
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, items, editing?.id, editorOpen])
 
   const handleSend = async (quoteId: string, phone?: string) => {
     setSendingId(quoteId)
@@ -283,9 +352,9 @@ export default function OrcamentosPage() {
       const r = await api(`/quotes/${quoteId}/send`, { method: 'POST', body: JSON.stringify(body) }, getToken()!)
       setSentOkId(quoteId)
       setSendMsg({ kind: 'ok', text: r.message || 'Orçamento enviado com sucesso!' })
+      invalidateCache('/quotes')
       loadQuotes()
     } catch (e: any) {
-      const code = e?.code || (e as any)?.message
       setSendMsg({ kind: 'err', text: e.message || 'Falha ao enviar' })
     } finally {
       setSendingId(null)
@@ -297,6 +366,7 @@ export default function OrcamentosPage() {
     setDuplicatingId(quoteId)
     try {
       await api(`/quotes/${quoteId}/duplicate`, { method: 'POST', body: JSON.stringify({}) }, getToken()!)
+      invalidateCache('/quotes')
       loadQuotes()
     } catch (e: any) {
       alert(e.message || 'Falha ao duplicar')
@@ -309,6 +379,7 @@ export default function OrcamentosPage() {
     if (!confirm('Excluir este orçamento?')) return
     try {
       await api(`/quotes/${quoteId}`, { method: 'DELETE' }, getToken()!)
+      invalidateCache('/quotes')
       loadQuotes()
     } catch (e: any) {
       alert(e.message || 'Falha ao excluir')
@@ -329,43 +400,58 @@ export default function OrcamentosPage() {
   const pickContact = (c: Contact) => {
     setSelectedContact(c)
     setForm(f => ({ ...f, contact_id: c.id }))
-    setNewContact({
-      name: c.name || c.custom_name || '', phone: c.phone || '',
-      email: c.email || '', company: c.company || '', document: c.document || '',
-      address_line: c.address_line || '', address_city: c.address_city || '',
-      address_state: c.address_state || '', address_zip: c.address_zip || '',
-      address_neighborhood: c.address_neighborhood || '', state_registration: c.state_registration || '',
-    })
+    setNewContact(contactToForm(c))
     setContactPickerOpen(false)
     setNewContactMode(false)
   }
+
+  const contactToForm = (c: Contact) => ({
+    name: c.name || c.custom_name || '', phone: c.phone || '',
+    email: c.email || '', company: c.company || '', document: c.document || '',
+    address_line: c.address_line || '', address_city: c.address_city || '',
+    address_state: c.address_state || '', address_zip: c.address_zip || '',
+    address_neighborhood: c.address_neighborhood || '', state_registration: c.state_registration || '',
+  })
 
   const clearContact = () => {
     setSelectedContact(null)
     setForm(f => ({ ...f, contact_id: '' }))
   }
 
-  const createContactAndAttach = async () => {
+  /** Cria OU atualiza cliente, mantendo vínculo com orçamento. */
+  const saveContact = async () => {
     if (!newContact.name.trim() || !newContact.phone.trim()) {
-      alert('Preencha nome e telefone do novo cliente')
+      alert('Preencha nome e telefone do cliente')
       return
     }
     setCreatingContact(true)
     try {
-      const r = await api('/contacts', { method: 'POST', body: JSON.stringify(newContact) }, getToken()!)
-      const created: Contact = {
-        id: r.id, name: newContact.name, phone: newContact.phone, email: newContact.email || null,
+      let id = selectedContact?.id || ''
+      if (id) {
+        await api(`/contacts/${id}`, { method: 'PUT', body: JSON.stringify(newContact) }, getToken()!)
+        setSendMsg({ kind: 'ok', text: 'Cliente atualizado.' })
+      } else {
+        const r = await api('/contacts', { method: 'POST', body: JSON.stringify(newContact) }, getToken()!)
+        id = r.id
+        setSendMsg({ kind: 'ok', text: r.existing ? 'Cliente já existia e foi vinculado.' : 'Cliente criado e vinculado ao orçamento.' })
+      }
+      const updated: Contact = {
+        id, name: newContact.name, phone: newContact.phone, email: newContact.email || null,
         company: newContact.company || null, document: newContact.document || null,
         address_line: newContact.address_line || null, address_city: newContact.address_city || null,
         address_state: newContact.address_state || null, address_zip: newContact.address_zip || null,
+        address_neighborhood: newContact.address_neighborhood || null, state_registration: newContact.state_registration || null,
       }
-      setSelectedContact(created)
-      setForm(f => ({ ...f, contact_id: created.id }))
+      setSelectedContact(updated)
+      setForm(f => ({ ...f, contact_id: id }))
       setNewContactMode(false)
-      setSendMsg({ kind: 'ok', text: r.existing ? 'Cliente já existia e foi vinculado.' : 'Cliente criado e vinculado ao orçamento.' })
+      setEditContactMode(false)
+      invalidateCache('/contacts')
       searchContacts('')
+      // força autosave do orçamento para persistir o vínculo
+      if (editing?.id) scheduleAutosave()
     } catch (e: any) {
-      alert(e.message || 'Erro ao criar cliente')
+      alert(e.message || 'Erro ao salvar cliente')
     } finally {
       setCreatingContact(false)
     }
@@ -385,8 +471,18 @@ export default function OrcamentosPage() {
   const updateItem = (idx: number, patch: Partial<QuoteItem>) => {
     setItems(prev => prev.map((it, i) => i === idx ? { ...it, ...patch } : it))
   }
-  const addItem = () => setItems(prev => [...prev, { description: '', quantity: 1, unit_price: 0 }])
+  const addItem = () => setItems(prev => [...prev, { description: '', quantity: 1, unit_price: 0, unit: '' }])
   const removeItem = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx))
+
+  const saveIndicator = () => {
+    switch (saveState) {
+      case 'dirty': return <span className="flex items-center gap-1 text-xs text-text-muted"><RefreshCw size={11} /> Pendente...</span>
+      case 'saving': return <span className="flex items-center gap-1 text-xs text-text-dim"><span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" /> Salvando...</span>
+      case 'saved': return <span className="flex items-center gap-1 text-xs text-brand-dark"><Check size={11} /> Salvo</span>
+      case 'error': return <span className="flex items-center gap-1 text-xs text-danger">Não foi possível salvar. Tentando novamente...</span>
+      default: return null
+    }
+  }
 
   return (
     <AppShell title="Orçamentos">
@@ -402,7 +498,7 @@ export default function OrcamentosPage() {
             />
           </div>
         </div>
-        <Button variant="primary" onClick={() => { setEditing(null); setSelectedContact(null); setForm({ title: '', description: '', valid_until: '', status: 'draft', notes: '', contact_id: '', conversation_id: '' }); setItems([{ description: '', quantity: 1, unit_price: 0 }]); setEditorOpen(true) }}>
+        <Button variant="primary" onClick={() => resetEditor()}>
           <Plus size={15} /> Novo Orçamento
         </Button>
       </div>
@@ -428,7 +524,7 @@ export default function OrcamentosPage() {
             title="Nenhum orçamento"
             description="Crie um novo orçamento ou gere a partir de uma conversa de cliente."
             action={
-              <Button variant="primary" onClick={() => { setEditing(null); setForm({ title: '', description: '', valid_until: '', status: 'draft', notes: '', contact_id: '', conversation_id: '' }); setItems([{ description: '', quantity: 1, unit_price: 0 }]); setEditorOpen(true) }}>
+              <Button variant="primary" onClick={() => resetEditor()}>
                 <Plus size={15} /> Criar primeiro orçamento
               </Button>
             }
@@ -444,6 +540,7 @@ export default function OrcamentosPage() {
                   <th>Título</th>
                   <th>Cliente</th>
                   <th>Valor</th>
+                  <th>Entrega</th>
                   <th>Status</th>
                   <th>Data</th>
                   <th className="text-right">Ações</th>
@@ -456,6 +553,7 @@ export default function OrcamentosPage() {
                     <td className="font-semibold">{q.title}</td>
                     <td>{q.contact_name || '—'}</td>
                     <td className="font-semibold text-brand-dark">{formatCurrency(q.amount)}</td>
+                    <td className="text-xs text-text-dim">{q.delivery_date ? formatDate(q.delivery_date) : (q.delivery_text || '—')}</td>
                     <td>
                       <Badge variant={STATUS_BADGE[q.status] || 'muted'}>
                         {STATUS_LABEL[q.status] || q.status}
@@ -541,32 +639,33 @@ export default function OrcamentosPage() {
         title={editing ? `Editar Orçamento #${editing.number || editing.id.slice(0, 8)}` : 'Novo Orçamento'}
         size="lg"
       >
-        {/* Cliente */}
         <div className="mb-5">
-          <label className="block text-[11px] font-semibold uppercase tracking-wide text-text-dim mb-1.5">Cliente</label>
-          {selectedContact ? (
-            <div className="flex items-center justify-between bg-bg-2 border border-border rounded-lg px-3 py-2.5">
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-text truncate">{selectedContact.name || selectedContact.custom_name || 'Sem nome'}</div>
-                <div className="text-xs text-text-dim truncate">
-                  {[selectedContact.phone, selectedContact.document, selectedContact.company].filter(Boolean).join(' · ') || '—'}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button className="p-1.5 rounded hover:bg-bg-3 text-text-muted hover:text-brand" title="Trocar cliente" onClick={() => { setContactPickerOpen(true); searchContacts(''); }}>
-                  <Pencil size={13} />
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-[11px] font-semibold uppercase tracking-wide text-text-dim">Cliente</label>
+            {selectedContact && (
+              <div className="flex gap-1">
+                <button className="p-1.5 rounded hover:bg-bg-2 text-text-dim hover:text-brand text-xs flex items-center gap-1" onClick={() => { setEditContactMode(true); setContactPickerOpen(false); setNewContactMode(false); setNewContact(contactToForm(selectedContact)) }}>
+                  <Pencil size={12} /> Editar cliente
                 </button>
-                <button className="p-1.5 rounded hover:bg-bg-3 text-text-muted hover:text-danger" title="Remover cliente" onClick={clearContact}>
+                <button className="p-1.5 rounded hover:bg-bg-2 text-text-muted hover:text-danger" title="Remover cliente" onClick={clearContact}>
                   <X size={13} />
                 </button>
+              </div>
+            )}
+          </div>
+          {selectedContact ? (
+            <div className="bg-bg-2 border border-border rounded-lg px-3 py-2.5 cursor-pointer hover:border-brand/60 transition-colors" onClick={() => { setContactPickerOpen(true); setNewContactMode(false); setEditContactMode(false); searchContacts(''); }}>
+              <div className="text-sm font-semibold text-text truncate">{selectedContact.name || selectedContact.custom_name || 'Sem nome'}</div>
+              <div className="text-xs text-text-dim truncate">
+                {[selectedContact.phone, selectedContact.document, selectedContact.email, selectedContact.company].filter(Boolean).join(' · ') || 'Clique para trocar'}
               </div>
             </div>
           ) : (
             <div className="flex gap-2">
-              <button className="flex-1 flex items-center justify-center gap-2 border border-dashed border-border rounded-lg px-3 py-2.5 text-sm text-text-dim hover:border-brand hover:text-brand transition-all" onClick={() => { setContactPickerOpen(true); searchContacts(''); }}>
+              <button className="flex-1 flex items-center justify-center gap-2 border border-dashed border-border rounded-lg px-3 py-2.5 text-sm text-text-dim hover:border-brand hover:text-brand transition-all" onClick={() => { setContactPickerOpen(true); setNewContactMode(false); setEditContactMode(false); searchContacts(''); }}>
                 <Search size={14} /> Selecionar cliente
               </button>
-              <button className="flex-1 flex items-center justify-center gap-2 border border-dashed border-border rounded-lg px-3 py-2.5 text-sm text-text-dim hover:border-brand hover:text-brand transition-all" onClick={() => { setNewContactMode(true); setContactPickerOpen(false); }}>
+              <button className="flex-1 flex items-center justify-center gap-2 border border-dashed border-border rounded-lg px-3 py-2.5 text-sm text-text-dim hover:border-brand hover:text-brand transition-all" onClick={() => { setNewContactMode(true); setContactPickerOpen(false); setEditContactMode(false); }}>
                 <UserPlus size={14} /> Novo Cliente
               </button>
             </div>
@@ -584,7 +683,7 @@ export default function OrcamentosPage() {
                 value={contactSearch}
                 onChange={(e) => { setContactSearch(e.target.value); searchContacts(e.target.value) }}
               />
-              <button className="p-1 rounded hover:bg-bg-3 text-text-muted" onClick={() => { setContactPickerOpen(false); setNewContactMode(true); }}>
+              <button className="p-1 rounded hover:bg-bg-3 text-text-muted" onClick={() => { setContactPickerOpen(false); setNewContactMode(true); setEditContactMode(false); }}>
                 <UserPlus size={15} /> <span className="text-xs font-semibold">Novo</span>
               </button>
             </div>
@@ -605,23 +704,25 @@ export default function OrcamentosPage() {
           </div>
         )}
 
-        {/* Novo cliente */}
-        {newContactMode && !contactPickerOpen && (
+        {/* Novo cliente / Editar cliente */}
+        {(newContactMode || editContactMode) && !contactPickerOpen && (
           <div className="mb-5 border border-brand/30 bg-brand-soft/20 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-display font-bold text-sm text-brand-dark">Novo Cliente</h3>
-              <button className="p-1 rounded hover:bg-bg-3 text-text-muted" onClick={() => { setNewContactMode(false); setContactPickerOpen(true); }}>
+              <h3 className="font-display font-bold text-sm text-brand-dark">{editContactMode ? 'Editar Cliente' : 'Novo Cliente'}</h3>
+              <button className="p-1 rounded hover:bg-bg-3 text-text-muted" onClick={() => { setNewContactMode(false); setEditContactMode(false); setContactPickerOpen(true); }}>
                 <X size={14} />
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Input label="Nome *" value={newContact.name} onChange={(e) => setNewContact({ ...newContact, name: e.target.value })} placeholder="Nome / Razão Social" />
+              <Input label="Nome / Razão Social *" value={newContact.name} onChange={(e) => setNewContact({ ...newContact, name: e.target.value })} placeholder="Nome completo" />
+              <Input label="Nome fantasia" value={newContact.company} onChange={(e) => setNewContact({ ...newContact, company: e.target.value })} placeholder="Nome fantasia / empresa" />
               <Input label="Telefone / WhatsApp *" value={newContact.phone} onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })} placeholder="+55 (15) 99999-9999" />
               <Input label="E-mail" value={newContact.email} onChange={(e) => setNewContact({ ...newContact, email: e.target.value })} placeholder="cliente@email.com" />
-              <Input label="Empresa" value={newContact.company} onChange={(e) => setNewContact({ ...newContact, company: e.target.value })} />
               <Input label="CPF / CNPJ" value={newContact.document} onChange={(e) => setNewContact({ ...newContact, document: e.target.value })} placeholder="000.000.000-00" />
-              <Input label="RG / IE" value={newContact.state_registration} onChange={(e) => setNewContact({ ...newContact, state_registration: e.target.value })} />
-              <Input label="Endereço" value={newContact.address_line} onChange={(e) => setNewContact({ ...newContact, address_line: e.target.value })} placeholder="Rua, número, complemento" />
+              <Input label="RG / IE" value={newContact.state_registration} onChange={(e) => setNewContact({ ...newContact, state_registration: e.target.value })} placeholder="RG / Inscrição estadual" />
+              <div className="md:col-span-2">
+                <Input label="Endereço" value={newContact.address_line} onChange={(e) => setNewContact({ ...newContact, address_line: e.target.value })} placeholder="Rua, número, complemento" />
+              </div>
               <Input label="Bairro" value={newContact.address_neighborhood} onChange={(e) => setNewContact({ ...newContact, address_neighborhood: e.target.value })} placeholder="Bairro" />
               <Input label="Cidade" value={newContact.address_city} onChange={(e) => setNewContact({ ...newContact, address_city: e.target.value })} />
               <div className="grid grid-cols-2 gap-3">
@@ -630,8 +731,8 @@ export default function OrcamentosPage() {
               </div>
             </div>
             <div className="flex justify-end mt-4">
-              <Button variant="primary" size="sm" disabled={creatingContact} onClick={createContactAndAttach}>
-                {creatingContact ? <><span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" /> Criando...</> : <><UserPlus size={14} /> Criar e vincular</>}
+              <Button variant="primary" size="sm" disabled={creatingContact} onClick={saveContact}>
+                {creatingContact ? <><span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" /> Salvando...</> : <><Save size={14} /> {editContactMode ? 'Salvar alterações' : 'Criar e vincular'}</>}
               </Button>
             </div>
           </div>
@@ -655,12 +756,25 @@ export default function OrcamentosPage() {
               rows={2}
             />
           </div>
-          <Input
+          <DatePicker
             label="Válido até"
-            type="date"
             value={form.valid_until}
-            onChange={(e) => setForm({ ...form, valid_until: e.target.value })}
+            onChange={(v) => setForm({ ...form, valid_until: v })}
+            min={new Date().toISOString().split('T')[0]}
           />
+          <DatePicker
+            label="Entrega prevista (data)"
+            value={form.delivery_date}
+            onChange={(v) => setForm({ ...form, delivery_date: v })}
+          />
+          <div className="md:col-span-2">
+            <Input
+              label="Prazo de entrega (texto)"
+              value={form.delivery_text}
+              onChange={(e) => setForm({ ...form, delivery_text: e.target.value })}
+              placeholder="Ex.: 15 dias úteis, 20 dias corridos, a combinar..."
+            />
+          </div>
           <div>
             <label className="block text-[11px] font-semibold uppercase tracking-wide text-text-dim mb-1.5">Status</label>
             <select
@@ -687,7 +801,7 @@ export default function OrcamentosPage() {
           <div className="space-y-2">
             {items.map((item, idx) => (
               <div key={idx} className="grid grid-cols-12 gap-2 items-start">
-                <div className="col-span-12 md:col-span-6">
+                <div className="col-span-12 md:col-span-5">
                   <input
                     className="w-full px-3 py-2 rounded-md bg-bg-2 border border-border text-sm focus:outline-none focus:border-brand focus:bg-bg-1"
                     placeholder="Descrição do item"
@@ -695,7 +809,7 @@ export default function OrcamentosPage() {
                     onChange={(e) => updateItem(idx, { description: e.target.value })}
                   />
                 </div>
-                <div className="col-span-4 md:col-span-2">
+                <div className="col-span-3 md:col-span-1">
                   <input
                     type="number"
                     min="0"
@@ -706,7 +820,15 @@ export default function OrcamentosPage() {
                     onChange={(e) => updateItem(idx, { quantity: parseFloat(e.target.value) || 0 })}
                   />
                 </div>
-                <div className="col-span-5 md:col-span-3">
+                <div className="col-span-3 md:col-span-1">
+                  <input
+                    className="w-full px-3 py-2 rounded-md bg-bg-2 border border-border text-sm text-center focus:outline-none focus:border-brand focus:bg-bg-1"
+                    placeholder="Un."
+                    value={item.unit || ''}
+                    onChange={(e) => updateItem(idx, { unit: e.target.value })}
+                  />
+                </div>
+                <div className="col-span-4 md:col-span-3">
                   <input
                     type="number"
                     min="0"
@@ -717,8 +839,8 @@ export default function OrcamentosPage() {
                     onChange={(e) => updateItem(idx, { unit_price: parseFloat(e.target.value) || 0 })}
                   />
                 </div>
-                <div className="col-span-3 md:col-span-1 flex items-center justify-end gap-1">
-                  <span className="text-xs font-semibold text-text-dim hidden md:inline">
+                <div className="col-span-2 md:col-span-2 flex items-center justify-end gap-1">
+                  <span className="text-xs font-semibold text-text-dim">
                     {formatCurrency((item.quantity || 0) * (item.unit_price || 0))}
                   </span>
                   {items.length > 1 && (
@@ -750,7 +872,7 @@ export default function OrcamentosPage() {
 
         {/* Actions */}
         <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             {editing && (
               <>
                 <Button variant="ghost" size="sm" disabled={downloadingId === editing.id} onClick={() => handlePdf(editing)}>
@@ -769,6 +891,7 @@ export default function OrcamentosPage() {
                     ? <><span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" /> Enviando...</>
                     : sentOkId === editing.id ? <><Send size={14} /> Enviado ✓</> : <><Send size={14} /> Enviar WhatsApp</>}
                 </Button>
+                <div className="ml-1 min-w-[120px]">{saveIndicator()}</div>
               </>
             )}
           </div>

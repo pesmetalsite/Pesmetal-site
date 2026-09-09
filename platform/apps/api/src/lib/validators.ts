@@ -97,11 +97,17 @@ export const CreateProjectSchema = z.object({
 // === Appointments ===
 export const CreateAppointmentSchema = z.object({
   title: z.string().min(1),
-  type: z.enum(['visit', 'meeting', 'call', 'quote', 'return', 'other']),
+  type: z.enum(['visit', 'meeting', 'call', 'quote', 'delivery', 'return', 'other']),
   date: z.string().min(1, 'Data obrigatória'),
+  time: z.string().optional().or(z.literal('')),
   duration_min: z.number().int().positive().optional(),
   notes: z.string().optional(),
+  location: z.string().optional().or(z.literal('')),
+  category: z.string().optional().or(z.literal('')),
+  status: z.enum(['scheduled', 'confirmed', 'done', 'cancelled', 'missed']).optional(),
   lead_id: z.string().optional(),
+  contact_id: z.string().optional(),
+  quote_id: z.string().optional(),
   user_id: z.string().optional(),
 });
 

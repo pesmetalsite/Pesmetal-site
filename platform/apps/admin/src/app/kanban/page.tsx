@@ -9,6 +9,7 @@ import { useDraggable } from '@dnd-kit/core'
 import AppShell from '@/components/AppShell'
 import { Card, Badge, Loading, Modal } from '@/components/ui'
 import { api, getToken } from '@/lib/api'
+import { useRealtime } from '@/lib/realtime'
 import { Briefcase, GripVertical, Phone, Building2, Calendar } from 'lucide-react'
 interface Lead {
   id: string; name: string; company: string | null; phone: string; email: string | null
@@ -38,6 +39,12 @@ export default function KanbanPage() {
     } finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])
+
+  // realtime: lead movido/atualizado reflete automaticamente
+  useRealtime((ev) => {
+    if (ev.entity !== 'leads') return
+    load()
+  })
 
   const onDragStart = (e: DragStartEvent) => setActiveId(e.active.id as string)
 

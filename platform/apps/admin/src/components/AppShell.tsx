@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils'
 import { api, getToken, getUser, clearToken } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
+import { useRealtime } from '@/lib/realtime'
 
 const NAV = [
   { section: 'Operação', items: [
@@ -75,6 +76,12 @@ export default function AppShell({ children, title }: { children: React.ReactNod
     return () => clearInterval(t)
   }, [fetchNotifications, bellEnabled])
 
+  // realtime: notificações novas chegam imediatamente (sem esperar o poll)
+  useRealtime((ev) => {
+    if (ev.entity !== 'notifications') return
+    fetchNotifications()
+  })
+
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false)
@@ -124,6 +131,7 @@ export default function AppShell({ children, title }: { children: React.ReactNod
                   <Link
                     key={it.path}
                     href={it.path}
+                    prefetch={true}
                     className={cn('nav-item', pathname === it.path && 'active')}
                     onClick={() => { setPathname(it.path); setSidebarOpen(false) }}
                   >
