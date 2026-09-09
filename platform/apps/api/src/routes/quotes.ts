@@ -96,6 +96,7 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       // Rodapé fixo no fim de CADA página (running footer)
       // `lineBreak:false` + altura fixa impedem que o rodapé gere paginação.
       const drawFooter = () => {
+        const savedY = doc.y;
         doc.save();
         doc.font('Helvetica-Bold').fontSize(9).fillColor('#1a9e5a').text('PES METAL', 45, footerY, { width: 510, align: 'center', lineBreak: false });
         doc.font('Helvetica').fontSize(7.5).fillColor('#9aa3a1')
@@ -103,6 +104,7 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
           .text(`CNPJ: ${companyCnpj} · ${companyPhone}`, 45, footerY + 21, { width: 510, align: 'center', lineBreak: false })
           .text(`E-mail: ${companyEmail} · ${companyWebsite}`, 45, footerY + 31, { width: 510, align: 'center', lineBreak: false });
         doc.restore();
+        doc.y = savedY;
       };
       // desenha rodapé na página NOVA logo após criar (síncrono, sem reentrância)
       const addPageWithFooter = () => {
@@ -126,6 +128,7 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
         .text(`Válido até: ${quote.valid_until ? fmtDate(quote.valid_until) : fmtDate(new Date(Date.now() + 15 * 86400000).toISOString())}`, 315, 100, { align: 'right', width: 240 });
 
       line(132);
+      drawFooter(); // rodapé da página 1 (páginas seguintes via addPageWithFooter)
 
       // ===== CLIENTE (layout adaptativo, sem campos vazios feios) =====
       const customerName = quote.contact_custom_name || quote.contact_name || quote.lead_name || '';
@@ -520,3 +523,4 @@ async function MessageRepository_insertOutgoing(conversationId: string | null, u
   const { MessageRepository } = await import('../repositories/conversationRepo.js');
   await MessageRepository.insert({ conversation_id: conversationId, direction: 'outgoing', type: 'text', content, status: 'sent', sent_by_user_id: userId });
 }
+
