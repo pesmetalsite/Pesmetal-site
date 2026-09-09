@@ -73,8 +73,8 @@
 .pes-site ::-webkit-scrollbar-track {  background: var(--bg-secondary);  }
 .pes-site ::-webkit-scrollbar-thumb {  background: var(--border-strong); border-radius: 3px;  }
 .pes-site .container {  max-width: 1280px; margin: 0 auto; padding: 0 64px;  }
-@media  (max-width: 768px)  {  }
-@media  (max-width: 480px)  {  }
+@media (max-width: 768px) { .pes-site .container {  padding: 0 24px;  } }
+@media (max-width: 480px) { .pes-site .container {  padding: 0 20px;  } }
 /* ========== HEADER ========== */
 .pes-site .header { 
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
@@ -172,7 +172,7 @@
   margin: 0 auto;
   padding: 0 64px;
  }
-@media  (max-width: 900px)  {  }
+@media (max-width: 900px) { .pes-site .hero-grid {  padding: 0 24px; gap: 60px;  } }
 .pes-site .hero-content { 
   position: relative;
   z-index: 2;
@@ -380,7 +380,31 @@
   font-weight: 700;
   color: var(--text-primary);
  }
-@media  (max-width: 900px)  {  }
+@media (max-width: 900px) { .pes-site .hero { 
+    padding: 120px 0 60px;
+    min-height: auto;
+   } .pes-site .hero-grid { 
+    grid-template-columns: 1fr;
+    gap: 60px;
+   } .pes-site .hero-visual { 
+    aspect-ratio: 4/3;
+    order: -1;
+   } .pes-site .hero-stamp { 
+    top: -16px;
+    right: -16px;
+    width: 100px;
+    height: 100px;
+   } .pes-site .hero-spec-card { 
+    bottom: -20px;
+    left: 20px;
+    min-width: 200px;
+   } .pes-site .hero-meta { 
+    flex-wrap: wrap;
+   } .pes-site .hero-clients { 
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+   } }
 .pes-site .btn { 
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
   padding: 15px 32px; border-radius: 6px;
@@ -502,7 +526,7 @@
   height: 20px;
   background: var(--border);
  }
-@media  (max-width: 768px)  {  }
+@media (max-width: 768px) { .pes-site .cred-inner {  flex-direction: column; align-items: flex-start; gap: 16px;  } .pes-site .cred-divider {  display: none;  } .pes-site .cred-items {  gap: 12px;  } }
 /* ========== TRUST BAR ========== */
 .pes-site .trust { 
   background: var(--text-primary);
@@ -834,8 +858,8 @@
   box-shadow: 0 8px 28px rgba(37, 211, 102, 0.5);
  }
 /* ========== RESPONSIVO ========== */
-@media  (max-width: 900px)  {  }
-@media  (max-width: 600px)  {  }
+@media (max-width: 900px) { .pes-site .nav {  display: none;  } .pes-site .menu-btn {  display: flex;  } .pes-site .trust-grid {  grid-template-columns: repeat(3, 1fr);  } .pes-site .trust-item:nth-child(3) {  border-right: none;  } .pes-site .trust-item:nth-child(4), .pes-site .trust-item:nth-child(5) {  border-right: none; border-top: 1px solid rgba(255,255,255,0.1);  } .pes-site .services-grid {  grid-template-columns: repeat(2, 1fr);  } .pes-site .about-grid {  grid-template-columns: 1fr; gap: 40px;  } .pes-site .projects-grid {  grid-template-columns: repeat(2, 1fr);  } .pes-site .form-grid {  grid-template-columns: 1fr; gap: 40px;  } .pes-site .form-row {  grid-template-columns: 1fr;  } .pes-site .footer-grid {  grid-template-columns: 1fr 1fr; gap: 32px;  } }
+@media (max-width: 600px) { .pes-site .trust-grid {  grid-template-columns: 1fr 1fr;  } .pes-site .services-grid {  grid-template-columns: 1fr;  } .pes-site .projects-grid {  grid-template-columns: 1fr;  } .pes-site .hero-actions {  flex-direction: column;  } .pes-site .hero-actions a {  text-align: center;  } .pes-site .cta-btns {  flex-direction: column; align-items: center;  } .pes-site .footer-grid {  grid-template-columns: 1fr;  } }
 /* ========== ANIMAÇÕES ========== */
 @keyframes pes-spin {  from { transform: rotate(0deg); } to { transform: rotate(360deg); }  }
 /* Fade up */
@@ -853,7 +877,7 @@
   content: ""; position: absolute; inset: 0; border-radius: 50%;
   background: var(--wa);
   z-index: -1;
-  animation: wa-ring 2.5s ease-out infinite;
+  animation: pes-wa-ring 2.5s ease-out infinite;
  }
 @keyframes pes-wa-ring { 
   0% { transform: scale(1); opacity: 0.5; }
@@ -874,4 +898,9 @@
   box-shadow: var(--shadow-lg);
  }
 /* ========== ACESSIBILIDADE: REDUCED MOTION ========== */
-@media  (prefers-reduced-motion: reduce)  {  }
+@media (prefers-reduced-motion: reduce) { .pes-site *, .pes-site *::before, .pes-site *::after { 
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+   } .pes-site .wa-float::after {  display: none;  } .pes-site .btn-wa::after {  display: none;  } .pes-site .hero-stamp {  animation: none;  } }
