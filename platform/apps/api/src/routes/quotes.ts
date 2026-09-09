@@ -213,8 +213,9 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       doc.moveDown(1.5);
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text('FORMA DE PG: A VISTA / NF / BOLETO (A COMBINAR)', 45, doc.y, { width: 510 });
       doc.font('Helvetica').fontSize(9.5).fillColor('#3d434a');
-      const obsText = quote.notes || quote.description || '';
-      doc.text(`OBS: ${obsText}`, 45, doc.y, { width: 510 });
+      const obsText = (quote.notes || quote.description || '').replace(/\s+/g, ' ').trim();
+      const obsShown = obsText.length > 360 ? `${obsText.slice(0, 360)}...` : obsText;
+      doc.text(`OBS: ${obsShown}`, 45, doc.y, { width: 510 });
       doc.moveDown(0.4);
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text('PRAZO: 7 DIAS . FRETE:', 45, doc.y, { width: 510 });
 
