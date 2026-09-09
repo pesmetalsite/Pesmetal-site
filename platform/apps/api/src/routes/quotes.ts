@@ -1,13 +1,13 @@
 ﻿/**
- * Quotes Router â€” orÃ§amentos com PDF (modelo real), envio WhatsApp, retenÃ§Ã£o e backup.
+ * Quotes Router — orçamentos com PDF (modelo real), envio WhatsApp, retenção e backup.
  *
- * CorreÃ§Ãµes crÃ­ticas aplicadas:
- * - PDF e envio exigem autenticaÃ§Ã£o (nenhum endpoint pÃºblico).
- * - ValidaÃ§Ã£o/normalizaÃ§Ã£o de telefone antes de chamar a Evolution (nÃ£o envia lixo).
- * - Erros estruturados com cÃ³digo (sem vazar detalhes internos da Evolution no client).
+ * Correções críticas aplicadas:
+ * - PDF e envio exigem autenticação (nenhum endpoint público).
+ * - Validação/normalização de telefone antes de chamar a Evolution (não envia lixo).
+ * - Erros estruturados com código (sem vazar detalhes internos da Evolution no client).
  * - Log estruturado do envio (quote_id, customer, conversation, instance, resultado).
- * - ProteÃ§Ã£o anti-duplo-clique no envio (lock em memÃ³ria por quote).
- * - PDF usa dados reais do cliente + dados da empresa (modelo real de orÃ§amento).
+ * - Proteção anti-duplo-clique no envio (lock em memória por quote).
+ * - PDF usa dados reais do cliente + dados da empresa (modelo real de orçamento).
  */
 import PDFDocument from 'pdfkit';
 import { json, readBody, getQuery } from '../lib/http.js';
@@ -20,7 +20,7 @@ import { Evolution } from '../services/evolution.js';
 import { createNotification } from '../services/notifications.js';
 import { logger } from '../lib/logger.js';
 
-/** Lock em memÃ³ria contra duplo-clique no envio de um mesmo orÃ§amento. */
+/** Lock em memória contra duplo-clique no envio de um mesmo orçamento. */
 const sendingLocks = new Set<string>();
 
 function deserialize(q: any) {
@@ -32,7 +32,7 @@ function formatCurrency(v: number, currency: string = 'R$') {
   return `${currency} ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function fmtDate(d: string | null | undefined, fallback = 'â€”'): string {
+function fmtDate(d: string | null | undefined, fallback = '—'): string {
   if (!d) return fallback;
   const dt = new Date(d);
   if (isNaN(dt.getTime())) return String(d);
@@ -41,8 +41,8 @@ function fmtDate(d: string | null | undefined, fallback = 'â€”'): string {
 
 /**
  * Normaliza e valida telefone brasileiro.
- * Aceita 10-11 dÃ­gitos (sem DDI) ou 12-13 iniciando em 55.
- * Retorna string normalizada ou null se invÃ¡lido.
+ * Aceita 10-11 dígitos (sem DDI) ou 12-13 iniciando em 55.
+ * Retorna string normalizada ou null se inválido.
  */
 function normalizeBrPhone(raw: string | null | undefined): string | null {
   const digits = String(raw || '').replace(/\D/g, '');
@@ -95,11 +95,11 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
         .text(`E-mail: ${companyEmail}`, 45, 103, { width: 260 })
         .text(`Web: ${companyWebsite}`, 45, 114, { width: 260 });
 
-      doc.fontSize(20).fillColor('#1f2328').text('ORÃ‡AMENTO', 315, 40, { align: 'right', width: 240 });
+      doc.fontSize(20).fillColor('#1f2328').text('ORÇAMENTO', 315, 40, { align: 'right', width: 240 });
       doc.fontSize(10).fillColor('#5c6670')
         .text(`NÂº ${quote.number || ''}`, 315, 72, { align: 'right', width: 240 })
         .text(`Emitido em: ${fmtDate(quote.created_at)}`, 315, 86, { align: 'right', width: 240 })
-        .text(`VÃ¡lido atÃ©: ${quote.valid_until ? fmtDate(quote.valid_until) : fmtDate(new Date(Date.now() + 15 * 86400000).toISOString())}`, 315, 100, { align: 'right', width: 240 });
+        .text(`Válido até: ${quote.valid_until ? fmtDate(quote.valid_until) : fmtDate(new Date(Date.now() + 15 * 86400000).toISOString())}`, 315, 100, { align: 'right', width: 240 });
 
       doc.moveTo(45, 132).lineTo(555, 132).strokeColor('#e5e8eb').lineWidth(1).stroke();
 
@@ -119,7 +119,7 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       doc.font('Helvetica-Bold').fontSize(12).fillColor('#1f2328').text('CLIENTE');
       doc.moveDown(0.3);
 
-      // 2 colunas Ã— 5 linhas (modelo real economiza espaÃ§o vertical)
+      // 2 colunas × 5 linhas (modelo real economiza espaço vertical)
       const leftCol: Array<[string, string]> = [
         ['NOME', customerName],
         ['EMAIL', customerEmail],
@@ -130,7 +130,7 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       const rightCol: Array<[string, string]> = [
         ['TELEFONE', customerPhone],
         ['CPF/CNPJ', customerDoc],
-        ['ENDEREÃ‡O', customerLine],
+        ['ENDEREÇO', customerLine],
         ['BAIRRO', customerNeighborhood],
         ['CEP', customerZip],
       ];
@@ -139,31 +139,31 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
         const [l1, v1] = leftCol[i];
         const [l2, v2] = rightCol[i];
         doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#5c6670').text(l1, 45, y, { width: 85 });
-        doc.font('Helvetica').fontSize(8.5).fillColor('#1f2328').text(v1 || 'â€”', 132, y, { width: 145 });
+        doc.font('Helvetica').fontSize(8.5).fillColor('#1f2328').text(v1 || '—', 132, y, { width: 145 });
         doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#5c6670').text(l2, 305, y, { width: 85 });
-        doc.font('Helvetica').fontSize(8.5).fillColor('#1f2328').text(v2 || 'â€”', 392, y, { width: 160 });
+        doc.font('Helvetica').fontSize(8.5).fillColor('#1f2328').text(v2 || '—', 392, y, { width: 160 });
         doc.y = y + 13;
       }
 
       doc.moveTo(45, doc.y).lineTo(555, doc.y).strokeColor('#e5e8eb').stroke();
 
-      // ===== DESCRIÃ‡ÃƒO =====
+      // ===== DESCRIÇÃO =====
       if (quote.description) {
         doc.moveDown(1.4);
-        doc.font('Helvetica-Bold').fontSize(11).fillColor('#1f2328').text('DESCRIÃ‡ÃƒO');
+        doc.font('Helvetica-Bold').fontSize(11).fillColor('#1f2328').text('DESCRIÇÃO');
         doc.font('Helvetica').fontSize(10).fillColor('#3d434a').text(quote.description);
       }
 
-      // ===== ORÃ‡AMENTO: tabela de itens (modelo real) =====
+      // ===== ORÇAMENTO: tabela de itens (modelo real) =====
       doc.moveDown(1.1);
-      doc.font('Helvetica-Bold').fontSize(12).fillColor('#1f2328').text('ORÃ‡AMENTO');
+      doc.font('Helvetica-Bold').fontSize(12).fillColor('#1f2328').text('ORÇAMENTO');
       doc.moveDown(0.4);
 
       let computedTotal = 0;
       const tableTop = doc.y;
       doc.fontSize(9).fillColor('#5c6670').font('Helvetica-Bold');
       doc.text('ITEM', 45, tableTop, { width: 40 });
-      doc.text('PRODUTO/SERVIÃ‡O', 90, tableTop, { width: 220 });
+      doc.text('PRODUTO/SERVIÇO', 90, tableTop, { width: 220 });
       doc.text('QUANT', 315, tableTop, { width: 45 });
       doc.text('UNI', 365, tableTop, { width: 35 });
       doc.text('VALOR', 405, tableTop, { width: 150 });
@@ -184,7 +184,7 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
         doc.y = rowY + 14;
       });
 
-      // linhas vazias para preencher atÃ© 8 itens
+      // linhas vazias para preencher até 8 itens
       const emptyRows = Math.max(0, 8 - items.length);
       for (let i = 0; i < emptyRows; i++) {
         const rowY = doc.y + 5;
@@ -194,7 +194,7 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
 
       doc.moveTo(45, doc.y).lineTo(555, doc.y).strokeColor('#1a9e5a').lineWidth(1).stroke();
 
-      // ===== TOTAIS (modelo real: SUBTOTAL / ACRÃ‰SCIMO / TOTAL) =====
+      // ===== TOTAIS (modelo real: SUBTOTAL / ACRÉSCIMO / TOTAL) =====
       const total = Number(quote.amount) || computedTotal;
       const subtotal = computedTotal;
       const acrescimo = Math.max(0, total - subtotal);
@@ -204,14 +204,14 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       doc.font('Helvetica-Bold').text(`R$ ${subtotal.toFixed(2)}`, 500, doc.y - 12, { width: 55, align: 'right' });
       doc.moveDown(0.5);
       doc.font('Helvetica').fontSize(9.5).fillColor('#1f2328');
-      doc.text('ACRÃ‰SCIMO:', 405, doc.y, { width: 90, align: 'right' });
+      doc.text('ACRÉSCIMO:', 405, doc.y, { width: 90, align: 'right' });
       doc.font('Helvetica-Bold').text(`R$ ${acrescimo.toFixed(2)}`, 500, doc.y - 12, { width: 55, align: 'right' });
       doc.moveDown(0.5);
       doc.font('Helvetica').fontSize(9.5).fillColor('#1a9e5a');
       doc.text('TOTAL:', 405, doc.y, { width: 90, align: 'right' });
       doc.font('Helvetica-Bold').fontSize(12).fillColor('#1a9e5a').text(`R$ ${total.toFixed(2)}`, 500, doc.y - 13, { width: 55, align: 'right' });
 
-      // ===== CONDIÃ‡Ã•ES (FORMA DE PG / OBS / PRAZO / FRETE) =====
+      // ===== CONDIÇÕES (FORMA DE PG / OBS / PRAZO / FRETE) =====
       doc.x = 45;
       doc.moveDown(1.5);
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text('FORMA DE PG: A VISTA / NF / BOLETO (A COMBINAR)', 45, doc.y, { width: 510 });
@@ -220,7 +220,7 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       doc.moveDown(0.4);
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text('PRAZO: 7 DIAS . FRETE:', 45, doc.y, { width: 510 });
 
-      // ===== RODAPÃ‰ =====
+      // ===== RODAPÉ =====
       doc.x = 45;
       doc.moveDown(2);
       doc.moveTo(45, doc.y).lineTo(555, doc.y).strokeColor('#e5e8eb').stroke();
@@ -256,7 +256,7 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
   // POST /quotes
   if (path === '/quotes' && method === 'POST') {
     const body = await readBody(req);
-    if (!body?.title) throw ApiError.validation('title Ã© obrigatÃ³rio');
+    if (!body?.title) throw ApiError.validation('title é obrigatório');
     const items = Array.isArray(body.items) ? body.items.filter((i: any) => i?.description) : [];
     const amount = Number(body.amount) || items.reduce((s: number, i: any) => s + (Number(i.quantity ?? i.qty ?? 1) * Number(i.unit_price ?? i.price ?? 0)), 0);
     const { id, number } = await QuoteRepository.insert({
@@ -266,8 +266,8 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
       items: items.length ? items : null,
       status: ['draft', 'sent', 'accepted', 'expired'].includes(body.status) ? body.status : 'draft',
     });
-    if (body.lead_id) await LeadEventRepository.insert({ lead_id: body.lead_id, user_id: user.id, type: 'quote_created', description: `OrÃ§amento ${number} criado` });
-    await createNotification({ type: 'quote_created', title: 'Novo orÃ§amento', body: `${body.title} (${number})`, data: { quote_id: id }, userId: user.id });
+    if (body.lead_id) await LeadEventRepository.insert({ lead_id: body.lead_id, user_id: user.id, type: 'quote_created', description: `Orçamento ${number} criado` });
+    await createNotification({ type: 'quote_created', title: 'Novo orçamento', body: `${body.title} (${number})`, data: { quote_id: id }, userId: user.id });
     return json(res, 201, { id, number });
   }
 
@@ -275,13 +275,13 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
   const idMatch = path.match(/^\/quotes\/([^\/]+)$/);
   if (idMatch && method === 'GET') {
     const quote = await QuoteRepository.findById(idMatch[1]);
-    if (!quote) throw ApiError.notFound('OrÃ§amento nÃ£o encontrado');
+    if (!quote) throw ApiError.notFound('Orçamento não encontrado');
     return json(res, 200, { quote: deserialize(quote) });
   }
   if (idMatch && method === 'PUT') {
     const body = await readBody(req);
     const existing = await QuoteRepository.findById(idMatch[1]);
-    if (!existing) throw ApiError.notFound('OrÃ§amento nÃ£o encontrado');
+    if (!existing) throw ApiError.notFound('Orçamento não encontrado');
     const items = Array.isArray(body.items) ? body.items.filter((i: any) => i?.description) : undefined;
     await QuoteRepository.update(idMatch[1], {
       ...body,
@@ -296,11 +296,11 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
     return json(res, 200, { ok: true });
   }
 
-  // GET /quotes/:id/pdf â€” protegido; frontend baixa via fetch autenticado (nunca navega direto)
+  // GET /quotes/:id/pdf — protegido; frontend baixa via fetch autenticado (nunca navega direto)
   const pdfMatch = path.match(/^\/quotes\/([^\/]+)\/pdf$/);
   if (pdfMatch && method === 'GET') {
     const quote = await QuoteRepository.findById(pdfMatch[1]);
-    if (!quote) throw ApiError.notFound('OrÃ§amento nÃ£o encontrado');
+    if (!quote) throw ApiError.notFound('Orçamento não encontrado');
     const company = await loadCompanySettings();
     const buffer = await generatePdfBuffer(quote, company);
     const fileName = `PES-METAL-Orcamento-${quote.number}-${safeName(quote.contact_name || quote.lead_name)}.pdf`;
@@ -312,17 +312,17 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
     return;
   }
 
-  // POST /quotes/:id/send â€” envia PDF via WhatsApp (Evolution sendMedia)
+  // POST /quotes/:id/send — envia PDF via WhatsApp (Evolution sendMedia)
   const sendMatch = path.match(/^\/quotes\/([^\/]+)\/send$/);
   if (sendMatch && method === 'POST') {
     if (sendingLocks.has(sendMatch[1])) {
-      return json(res, 409, { error: 'Este orÃ§amento jÃ¡ estÃ¡ sendo enviado. Aguarde o envio terminar.', code: 'SEND_IN_PROGRESS' });
+      return json(res, 409, { error: 'Este orçamento já está sendo enviado. Aguarde o envio terminar.', code: 'SEND_IN_PROGRESS' });
     }
     sendingLocks.add(sendMatch[1]);
 
     try {
       const quote = await QuoteRepository.findById(sendMatch[1]);
-      if (!quote) throw ApiError.notFound('OrÃ§amento nÃ£o encontrado');
+      if (!quote) throw ApiError.notFound('Orçamento não encontrado');
       const body = await readBody(req).catch(() => ({}));
 
       // 1) Resolve telefone: body.phone (explicito) â†’ contact.phone â†’ telefone da conversa
@@ -331,19 +331,19 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
       if (body?.phone) {
         phone = normalizeBrPhone(String(body.phone));
         if (!phone) {
-          logger.warn('quote send: phone invÃ¡lido enviado pelo usuÃ¡rio', { quote_id: quote.id });
-          return json(res, 422, { error: 'O nÃºmero de WhatsApp informado Ã© invÃ¡lido. Informe um nÃºmero brasileiro vÃ¡lido.', code: 'WHATSAPP_PHONE_INVALID' });
+          logger.warn('quote send: phone inválido enviado pelo usuário', { quote_id: quote.id });
+          return json(res, 422, { error: 'O número de WhatsApp informado é inválido. Informe um número brasileiro válido.', code: 'WHATSAPP_PHONE_INVALID' });
         }
       }
 
       if (!phone && quote.contact_phone) {
         phone = normalizeBrPhone(quote.contact_phone);
         if (!phone) {
-          logger.warn('quote send: telefone do contato Ã© invÃ¡lido/corrompido', { quote_id: quote.id, contact_id: quote.contact_id, raw: quote.contact_phone });
+          logger.warn('quote send: telefone do contato é inválido/corrompido', { quote_id: quote.id, contact_id: quote.contact_id, raw: quote.contact_phone });
         }
       }
 
-      // 2) Conversa â†’ contato (fonte da verdade do nÃºmero)
+      // 2) Conversa â†’ contato (fonte da verdade do número)
       if (!phone && quote.conversation_id) {
         const conv = (await q1(`SELECT contact_id, instance_id FROM whatsapp_conversations WHERE id = $1`, [quote.conversation_id])) as any;
         if (conv?.contact_id) {
@@ -354,12 +354,12 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
 
       if (!phone) {
         return json(res, 422, {
-          error: 'NÃ£o foi possÃ­vel identificar o telefone do cliente. Edite o orÃ§amento e vincule um cliente com WhatsApp vÃ¡lido, ou informe o nÃºmero.',
+          error: 'Não foi possível identificar o telefone do cliente. Edite o orçamento e vincule um cliente com WhatsApp válido, ou informe o número.',
           code: 'WHATSAPP_PHONE_MISSING',
         });
       }
 
-      // 3) Resolve instÃ¢ncia: body.instance_name â†’ conversa â†’ default
+      // 3) Resolve instância: body.instance_name â†’ conversa â†’ default
       let instanceName = body?.instance_name;
       if (!instanceName && quote.conversation_id) {
         const conv = (await q1(`SELECT instance_id FROM whatsapp_conversations WHERE id = $1`, [quote.conversation_id])) as any;
@@ -383,7 +383,7 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
 
       let sendResult: any;
       try {
-        sendResult = await Evolution.sendMedia({ number: phone, mediaType: 'document', media: base64, fileName, caption: `OrÃ§amento ${quote.number} â€” ${quote.title || 'PES METAL'}`, instanceName });
+        sendResult = await Evolution.sendMedia({ number: phone, mediaType: 'document', media: base64, fileName, caption: `Orçamento ${quote.number} — ${quote.title || 'PES METAL'}`, instanceName });
       } catch (err: any) {
         const rawMsg = String(err?.message || err || 'erro desconhecido');
         logger.error('quote send: Evolution recusou o envio', {
@@ -394,21 +394,21 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
         const isInvalidNumber = /400|exists|jid|Bad Request/i.test(rawMsg);
         const isDisconnected = /connection|disconnected|401|403|instance.*not/i.test(rawMsg);
         if (isInvalidNumber) {
-          await createNotification({ type: 'quote_send_error', title: 'NÃºmero de WhatsApp invÃ¡lido', body: `NÃ£o foi possÃ­vel enviar o orÃ§amento ${quote.number}: o nÃºmero do cliente parece incorreto.`, data: { quote_id: quote.id }, userId: user.id });
-          return json(res, 422, { error: 'NÃ£o foi possÃ­vel enviar porque o nÃºmero de WhatsApp do cliente parece estar incorreto. Verifique o nÃºmero vinculado ao cliente.', code: 'WHATSAPP_PHONE_INVALID' });
+          await createNotification({ type: 'quote_send_error', title: 'Número de WhatsApp inválido', body: `Não foi possível enviar o orçamento ${quote.number}: o número do cliente parece incorreto.`, data: { quote_id: quote.id }, userId: user.id });
+          return json(res, 422, { error: 'Não foi possível enviar porque o número de WhatsApp do cliente parece estar incorreto. Verifique o número vinculado ao cliente.', code: 'WHATSAPP_PHONE_INVALID' });
         }
         if (isDisconnected) {
-          await createNotification({ type: 'quote_send_error', title: 'WhatsApp desconectado', body: `NÃ£o foi possÃ­vel enviar o orÃ§amento ${quote.number}: o WhatsApp selecionado estÃ¡ desconectado.`, data: { quote_id: quote.id }, userId: user.id });
-          return json(res, 502, { error: 'NÃ£o foi possÃ­vel enviar porque o WhatsApp selecionado estÃ¡ desconectado.', code: 'WHATSAPP_INSTANCE_OFFLINE' });
+          await createNotification({ type: 'quote_send_error', title: 'WhatsApp desconectado', body: `Não foi possível enviar o orçamento ${quote.number}: o WhatsApp selecionado está desconectado.`, data: { quote_id: quote.id }, userId: user.id });
+          return json(res, 502, { error: 'Não foi possível enviar porque o WhatsApp selecionado está desconectado.', code: 'WHATSAPP_INSTANCE_OFFLINE' });
         }
-        await createNotification({ type: 'quote_send_error', title: 'Erro ao enviar orÃ§amento', body: `NÃ£o foi possÃ­vel enviar o orÃ§amento ${quote.number}. Tente novamente em instantes.`, data: { quote_id: quote.id }, userId: user.id });
-        return json(res, 502, { error: 'NÃ£o foi possÃ­vel enviar o orÃ§amento pelo WhatsApp. Verifique a conexÃ£o e tente novamente.', code: 'WHATSAPP_SEND_FAILED' });
+        await createNotification({ type: 'quote_send_error', title: 'Erro ao enviar orçamento', body: `Não foi possível enviar o orçamento ${quote.number}. Tente novamente em instantes.`, data: { quote_id: quote.id }, userId: user.id });
+        return json(res, 502, { error: 'Não foi possível enviar o orçamento pelo WhatsApp. Verifique a conexão e tente novamente.', code: 'WHATSAPP_SEND_FAILED' });
       }
 
-      // 6) Sucesso: marca como enviado, registra mensagem e notificaÃ§Ã£o
+      // 6) Sucesso: marca como enviado, registra mensagem e notificação
       await QuoteRepository.markSent(quote.id, user.id);
-      await MessageRepository_insertOutgoing(quote.conversation_id, user.id, `ðŸ“„ OrÃ§amento ${quote.number} enviado (${fileName})`);
-      await createNotification({ type: 'quote_sent', title: 'OrÃ§amento enviado', body: `${quote.title || quote.number} enviado por WhatsApp`, data: { quote_id: quote.id }, userId: user.id });
+      await MessageRepository_insertOutgoing(quote.conversation_id, user.id, `📄 Orçamento ${quote.number} enviado (${fileName})`);
+      await createNotification({ type: 'quote_sent', title: 'Orçamento enviado', body: `${quote.title || quote.number} enviado por WhatsApp`, data: { quote_id: quote.id }, userId: user.id });
 
       logger.info('quote send: sucesso', {
         quote_id: quote.id, number: quote.number, customer: quote.contact_id,
@@ -425,25 +425,25 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
   const dupMatch = path.match(/^\/quotes\/([^\/]+)\/duplicate$/);
   if (dupMatch && method === 'POST') {
     const original = await QuoteRepository.findById(dupMatch[1]);
-    if (!original) throw ApiError.notFound('OrÃ§amento nÃ£o encontrado');
+    if (!original) throw ApiError.notFound('Orçamento não encontrado');
     const { id, number } = await QuoteRepository.insert({
       lead_id: original.lead_id, contact_id: original.contact_id, conversation_id: original.conversation_id,
-      user_id: user.id, title: `${original.title} (cÃ³pia)`, description: original.description,
+      user_id: user.id, title: `${original.title} (cópia)`, description: original.description,
       amount: original.amount, valid_until: original.valid_until, status: 'draft', notes: original.notes,
       items: typeof original.items === 'string' ? JSON.parse(original.items || '[]') : (original.items || []),
     });
     return json(res, 201, { id, number });
   }
 
-  // GET /quotes/expiring/notify â€” verifica orÃ§amentos prÃ³ximos da expiraÃ§Ã£o
+  // GET /quotes/expiring/notify — verifica orçamentos próximos da expiração
   const expMatch = path.match(/^\/quotes\/expiring\/notify$/);
   if (expMatch && method === 'GET') {
     const expiring = await QuoteRepository.findExpiringSoon(3);
     for (const q of expiring) {
       await createNotification({
         type: 'quote_expiring',
-        title: 'OrÃ§amentos prestes a expirar',
-        body: `${q.title} (${q.number}) expira em breve. FaÃ§a backup.`,
+        title: 'Orçamentos prestes a expirar',
+        body: `${q.title} (${q.number}) expira em breve. Faça backup.`,
         data: { quote_id: q.id },
         userId: user.id,
       });
