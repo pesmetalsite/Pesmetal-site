@@ -197,16 +197,16 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       const acrescimo = Math.max(0, total - subtotal);
       doc.moveDown(0.7);
       doc.font('Helvetica').fontSize(9.5).fillColor('#1f2328');
-      doc.text('SUBTOTAL:', 405, doc.y, { width: 90, align: 'right' });
-      doc.font('Helvetica-Bold').text(`R$ ${subtotal.toFixed(2)}`, 500, doc.y - 12, { width: 55, align: 'right' });
+      doc.text('SUBTOTAL:', 385, doc.y, { width: 95, align: 'right' });
+      doc.font('Helvetica-Bold').text(`R$ ${subtotal.toFixed(2)}`, 485, doc.y - 12, { width: 70, align: 'right' });
       doc.moveDown(0.5);
       doc.font('Helvetica').fontSize(9.5).fillColor('#1f2328');
-      doc.text('ACRÉSCIMO:', 405, doc.y, { width: 90, align: 'right' });
-      doc.font('Helvetica-Bold').text(`R$ ${acrescimo.toFixed(2)}`, 500, doc.y - 12, { width: 55, align: 'right' });
+      doc.text('ACRÉSCIMO:', 385, doc.y, { width: 95, align: 'right' });
+      doc.font('Helvetica-Bold').text(`R$ ${acrescimo.toFixed(2)}`, 485, doc.y - 12, { width: 70, align: 'right' });
       doc.moveDown(0.5);
       doc.font('Helvetica').fontSize(9.5).fillColor('#1a9e5a');
-      doc.text('TOTAL:', 405, doc.y, { width: 90, align: 'right' });
-      doc.font('Helvetica-Bold').fontSize(12).fillColor('#1a9e5a').text(`R$ ${total.toFixed(2)}`, 500, doc.y - 13, { width: 55, align: 'right' });
+      doc.text('TOTAL:', 385, doc.y, { width: 95, align: 'right' });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor('#1a9e5a').text(`R$ ${total.toFixed(2)}`, 485, doc.y - 13, { width: 70, align: 'right' });
 
       // ===== CONDIÇÕES (FORMA DE PG / OBS / PRAZO / FRETE) =====
       doc.x = 45;
@@ -324,7 +324,7 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
       if (!quote) throw ApiError.notFound('Orçamento não encontrado');
       const body = await readBody(req).catch(() => ({}));
 
-      // 1) Resolve telefone: body.phone (explicito) â†’ contact.phone â†’ telefone da conversa
+      // 1) Resolve telefone: body.phone (explicito) →’ contact.phone →’ telefone da conversa
       let phone: string | null = null;
 
       if (body?.phone) {
@@ -342,7 +342,7 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
         }
       }
 
-      // 2) Conversa â†’ contato (fonte da verdade do número)
+      // 2) Conversa →’ contato (fonte da verdade do número)
       if (!phone && quote.conversation_id) {
         const conv = (await q1(`SELECT contact_id, instance_id FROM whatsapp_conversations WHERE id = $1`, [quote.conversation_id])) as any;
         if (conv?.contact_id) {
@@ -358,7 +358,7 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
         });
       }
 
-      // 3) Resolve instância: body.instance_name â†’ conversa â†’ default
+      // 3) Resolve instância: body.instance_name →’ conversa →’ default
       let instanceName = body?.instance_name;
       if (!instanceName && quote.conversation_id) {
         const conv = (await q1(`SELECT instance_id FROM whatsapp_conversations WHERE id = $1`, [quote.conversation_id])) as any;
