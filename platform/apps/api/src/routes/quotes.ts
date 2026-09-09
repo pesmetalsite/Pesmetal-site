@@ -86,7 +86,7 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       const companyAddress = company.company_address || '';
       const companyCnpj = company.company_cnpj || '39.350.593.0001/51';
 
-      // ===== HEADER: empresa (bloco esquerdo) + nÂº/data (bloco direito) =====
+      // ===== HEADER: empresa (bloco esquerdo) + nº/data (bloco direito) =====
       doc.font('Helvetica-Bold').fontSize(22).fillColor('#1a9e5a').text(companyName.toUpperCase(), 45, 40);
       doc.font('Helvetica').fontSize(8).fillColor('#5c6670')
         .text(`CNPJ: ${companyCnpj}`, 45, 70, { width: 260 })
@@ -97,7 +97,7 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
 
       doc.fontSize(20).fillColor('#1f2328').text('ORÇAMENTO', 315, 40, { align: 'right', width: 240 });
       doc.fontSize(10).fillColor('#5c6670')
-        .text(`NÂº ${quote.number || ''}`, 315, 72, { align: 'right', width: 240 })
+        .text(`Nº ${quote.number || ''}`, 315, 72, { align: 'right', width: 240 })
         .text(`Emitido em: ${fmtDate(quote.created_at)}`, 315, 86, { align: 'right', width: 240 })
         .text(`Válido até: ${quote.valid_until ? fmtDate(quote.valid_until) : fmtDate(new Date(Date.now() + 15 * 86400000).toISOString())}`, 315, 100, { align: 'right', width: 240 });
 
@@ -147,16 +147,10 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
 
       doc.moveTo(45, doc.y).lineTo(555, doc.y).strokeColor('#e5e8eb').stroke();
 
-      // ===== DESCRIÇÃO =====
-      if (quote.description) {
-        doc.moveDown(1.4);
-        doc.font('Helvetica-Bold').fontSize(11).fillColor('#1f2328').text('DESCRIÇÃO');
-        doc.font('Helvetica').fontSize(10).fillColor('#3d434a').text(quote.description);
-      }
-
       // ===== ORÇAMENTO: tabela de itens (modelo real) =====
+      doc.x = 45;
       doc.moveDown(1.1);
-      doc.font('Helvetica-Bold').fontSize(12).fillColor('#1f2328').text('ORÇAMENTO');
+      doc.font('Helvetica-Bold').fontSize(12).fillColor('#1f2328').text('ORÇAMENTO', 45, doc.y, { width: 510 });
       doc.moveDown(0.4);
 
       let computedTotal = 0;
@@ -184,8 +178,11 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
         doc.y = rowY + 14;
       });
 
-      // linhas vazias para preencher até 8 itens
-      const emptyRows = Math.max(0, 8 - items.length);
+      // linhas vazias para preencher até 8 itens (adaptativo ao espaço restante)
+      const pageHeight = doc.page.height - doc.page.margins.bottom;
+      const bottomBlock = 265; // espaço reservado p/ totais + condições + rodapé
+      const maxEmpty = Math.max(0, Math.floor((pageHeight - bottomBlock - doc.y) / 14));
+      const emptyRows = Math.max(0, Math.min(8 - items.length, maxEmpty));
       for (let i = 0; i < emptyRows; i++) {
         const rowY = doc.y + 5;
         doc.text(String(items.length + i + 1), 45, rowY, { width: 40 });
@@ -216,7 +213,8 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       doc.moveDown(1.5);
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text('FORMA DE PG: A VISTA / NF / BOLETO (A COMBINAR)', 45, doc.y, { width: 510 });
       doc.font('Helvetica').fontSize(9.5).fillColor('#3d434a');
-      doc.text(`OBS: ${quote.notes || ''}`, 45, doc.y, { width: 510 });
+      const obsText = quote.notes || quote.description || '';
+      doc.text(`OBS: ${obsText}`, 45, doc.y, { width: 510 });
       doc.moveDown(0.4);
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor('#1f2328').text('PRAZO: 7 DIAS . FRETE:', 45, doc.y, { width: 510 });
 
@@ -227,9 +225,9 @@ function generatePdfBuffer(quote: any, company: Record<string, string>): Promise
       doc.moveDown(0.4);
       doc.font('Helvetica-Bold').fontSize(10).fillColor('#1a9e5a').text('PES METAL', 45, doc.y, { width: 510, align: 'center' });
       doc.font('Helvetica').fontSize(8).fillColor('#9aa3a1')
-        .text('Caldeiraria Â· Soldagem Â· Usinagem', 45, doc.y, { width: 510, align: 'center' })
-        .text(`CNPJ: ${companyCnpj} Â· ${companyPhone}`, 45, doc.y, { width: 510, align: 'center' })
-        .text(`E-mail: ${companyEmail} Â· ${companyWebsite}`, 45, doc.y, { width: 510, align: 'center' });
+        .text('Caldeiraria · Soldagem · Usinagem', 45, doc.y, { width: 510, align: 'center' })
+        .text(`CNPJ: ${companyCnpj} · ${companyPhone}`, 45, doc.y, { width: 510, align: 'center' })
+        .text(`E-mail: ${companyEmail} · ${companyWebsite}`, 45, doc.y, { width: 510, align: 'center' });
 
       doc.end();
     } catch (err) {
