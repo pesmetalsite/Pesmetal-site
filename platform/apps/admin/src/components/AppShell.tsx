@@ -14,7 +14,7 @@ import { useRealtime } from '@/lib/realtime'
 
 const NAV = [
   { section: 'Operação', items: [
-    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/conversas', label: 'Conversas', icon: MessageSquare },
     { path: '/kanban', label: 'Kanban', icon: KanbanSquare },
     { path: '/agenda', label: 'Agenda', icon: CalendarDays },

@@ -22,7 +22,7 @@ function LoginForm() {
         body: JSON.stringify({ email, password }),
       })
       setToken(token); setUser(user)
-      router.replace('/')
+      router.replace('/dashboard')
     } catch (e: any) {
       setError(e.message || 'Erro ao entrar. Verifique suas credenciais.')
     } finally { setLoading(false) }
