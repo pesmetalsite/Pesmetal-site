@@ -11,7 +11,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp, Copy, Image as ImageIcon, Music, Video, FileText, MessageSquare, Type, Plus, Save, Trash2, Upload, CornerDownLeft, X } from 'lucide-react'
 import { Button, Input, Loading, Modal, Textarea } from '@/components/ui'
-import { Select } from '@/components/ui/Select'
 import { api, getToken } from '@/lib/api'
 
 export type StepType = 'message' | 'image' | 'audio' | 'video' | 'document' | 'menu' | 'end'
@@ -201,11 +200,15 @@ export function StepsEditor({ steps, stepOptions, stages, onChange }: StepsEdito
             <div className="step-card-body">
               <div className="step-row">
                 <label className="label">Tipo</label>
-                <Select
+                <select
+                  className="input"
                   value={step.type}
-                  onChange={(v) => patchStep(step.id, { type: v as StepType })}
-                  options={Object.entries(TYPE_LABELS).map(([k, v]) => ({ value: k, label: v.label }))}
-                />
+                  onChange={(e) => patchStep(step.id, { type: e.target.value as StepType })}
+                >
+                  {Object.entries(TYPE_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>{v.label}</option>
+                  ))}
+                </select>
               </div>
 
               {step.type !== 'end' && (
@@ -251,7 +254,7 @@ export function StepsEditor({ steps, stepOptions, stages, onChange }: StepsEdito
                   <Textarea
                     rows={3}
                     value={step.content || ''}
-                    onChange={(v) => patchStep(step.id, { content: v })}
+                    onChange={(e) => patchStep(step.id, { content: e.target.value })}
                     placeholder="Digite a mensagem..."
                   />
                 </div>
@@ -263,7 +266,7 @@ export function StepsEditor({ steps, stepOptions, stages, onChange }: StepsEdito
                   <Textarea
                     rows={2}
                     value={step.content || ''}
-                    onChange={(v) => patchStep(step.id, { content: v })}
+                    onChange={(e) => patchStep(step.id, { content: e.target.value })}
                     placeholder="Ex: Olá! Qual serviço você procura?"
                   />
                 </div>
@@ -307,7 +310,7 @@ export function StepsEditor({ steps, stepOptions, stages, onChange }: StepsEdito
                       <Textarea
                         rows={2}
                         value={step.caption || ''}
-                        onChange={(v) => patchStep(step.id, { caption: v })}
+                        onChange={(e) => patchStep(step.id, { caption: e.target.value })}
                         placeholder="Texto que acompanha a mídia"
                       />
                     </div>
@@ -321,7 +324,7 @@ export function StepsEditor({ steps, stepOptions, stages, onChange }: StepsEdito
                   <Textarea
                     rows={2}
                     value={step.content || ''}
-                    onChange={(v) => patchStep(step.id, { content: v })}
+                    onChange={(e) => patchStep(step.id, { content: e.target.value })}
                     placeholder="Ex: Fluxo encerrado. Nossa equipe entrará em contato."
                   />
                 </div>
