@@ -296,7 +296,8 @@ export async function uploadRouter(req: any, res: any, url: URL) {
       const boundaryMatch = ctype.match(/boundary=(.+)$/);
       if (!boundaryMatch) return json(res, 400, { error: 'boundary ausente' });
       const boundaryRaw = boundaryMatch[1].replace(/^"|"$/g, '').trim();
-      const boundary = `--${boundaryRaw}`;
+      // curl/clientes geralmente já enviam boundary com prefixo `--`. Alguns não.
+      const boundary = boundaryRaw.startsWith('--') ? boundaryRaw : `--${boundaryRaw}`;
 
       const raw = await readRawBody(req, MAX_BYTES);
       const parts = parseMultipart(raw, boundary);
