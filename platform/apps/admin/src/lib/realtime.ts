@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { API_URL, getToken } from './api'
+import { getToken } from './api'
 
 export interface RealtimeEvent {
   entity: string
@@ -11,69 +11,66 @@ export interface RealtimeEvent {
 
 type Handler = (ev: RealtimeEvent) => void
 
-let sharedController: AbortController | null = null
 const handlers = new Set<Handler>()
-let retryTimer: ReturnType<typeof setTimeout> | null = null
+let pollTimer: ReturnType<typeof setTimeout> | null = null
 let reconnectDelay = 1000
 let started = false
+let isVisible = true
 
-function connect() {
-  if (sharedController) return
+function getAPI() {
+  return (typeof window !== 'undefined' && (window as any).__NEXT_PUBLIC_API_URL)
+    || process.env.NEXT_PUBLIC_API_URL
+    || 'https://lucid-contentment-production-17bc.up.railway.app'
+}
+
+async function poll() {
   const token = getToken()
   if (!token) return
-  const controller = new AbortController()
-  sharedController = controller
 
-  const stream = async () => {
-    try {
-      const res = await fetch(`${API_URL}/realtime/stream`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      })
-      if (!res.ok || !res.body) throw new Error(`realtime ${res.status}`)
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          try {
-            const ev = JSON.parse(line.slice(6)) as RealtimeEvent
-            handlers.forEach(h => { try { h(ev) } catch { /* listener error */ } })
-          } catch { /* ignore malformed */ }
-        }
+  try {
+    const res = await fetch(`${getAPI()}/realtime/events`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    })
+
+    if (!res.ok) throw new Error(`realtime ${res.status}`)
+
+    const events: RealtimeEvent[] = await res.json()
+
+    // Encontrar o mais recente por entidade
+    const latestByEntity: Record<string, RealtimeEvent> = {}
+    for (const ev of events) {
+      if (!latestByEntity[ev.entity] || new Date(ev.ts) > new Date(latestByEntity[ev.entity].ts)) {
+        latestByEntity[ev.entity] = ev
       }
-    } catch (err: any) {
-      if (controller.signal.aborted) return
-      // reconexão controlada com backoff (evita loop infinito)
-      reconnectDelay = Math.min(reconnectDelay * 2, 15000)
-      retryTimer = setTimeout(() => { sharedController = null; connect() }, reconnectDelay)
     }
+
+    Object.values(latestByEntity).forEach(ev => {
+      handlers.forEach(h => { try { h(ev) } catch {} })
+    })
+  } catch {}
+}
+
+function startPolling() {
+  if (pollTimer) return
+
+  // Poll inicial
+  poll()
+
+  // Poll a cada 5 segundos quando visível
+  pollTimer = setInterval(() => {
+    if (isVisible) poll()
+  }, 5000)
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
   }
-
-  stream()
 }
 
-function disconnect() {
-  if (retryTimer) clearTimeout(retryTimer)
-  if (sharedController) { sharedController.abort(); sharedController = null }
-}
-
-function ensureConnected() {
-  if (!started) {
-    started = true
-    window.addEventListener('online', () => { reconnectDelay = 1000; connect() })
-    window.addEventListener('offline', disconnect)
-  }
-  connect()
-}
-
-/** Assina eventos realtime com cleanup automático e dedupe de subscription. */
+/** Hook que notifica handlers quando dados mudam no backend */
 export function useRealtime(onEvent: (ev: RealtimeEvent) => void, entities?: string[]) {
   const handlerRef = useRef(onEvent)
   handlerRef.current = onEvent
@@ -84,7 +81,23 @@ export function useRealtime(onEvent: (ev: RealtimeEvent) => void, entities?: str
       handlerRef.current(ev)
     }
     handlers.add(h)
-    ensureConnected()
-    return () => { handlers.delete(h) }
+
+    if (!started) {
+      started = true
+
+      // Detectar visibilidade da aba
+      const handleVisibility = () => {
+        isVisible = !document.hidden
+        if (isVisible) poll() // Poll imediato ao voltar
+      }
+      document.addEventListener('visibilitychange', handleVisibility)
+    }
+
+    startPolling()
+
+    return () => {
+      handlers.delete(h)
+      // Não para o polling - outros handlers podem precisar
+    }
   }, [entities?.join(',')])
 }
