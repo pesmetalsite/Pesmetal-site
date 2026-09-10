@@ -1,17 +1,25 @@
 /**
- * Auth Router — bcrypt + JWT.
+ * Auth Router — bcrypt + JWT + rate limiting.
  */
 import { json, readBody } from '../lib/http.js';
 import { authenticate, hashPassword, verifyPassword, signToken, getUserById } from '../lib/auth.js';
 import { q, qe } from '../lib/db.js';
-import { LoginSchema, parseBody } from '../lib/validators.js';
+import { LoginSchema, ChangePasswordSchema, RegisterUserSchema, parseBody } from '../lib/validators.js';
 import { ApiError, asyncHandler } from '../lib/errors.js';
+import { checkRateLimit } from '../lib/rateLimit.js';
+import { nanoid } from 'nanoid';
 
 export const authRouter = asyncHandler(async (req, res, url) => {
   const path = url.pathname;
   const method = req.method;
 
   if (path === '/auth/login' && method === 'POST') {
+    // Rate limit: 10 tentativas / 15 min por IP
+    const rl = checkRateLimit(req, { windowMs: 15 * 60 * 1000, max: 10 });
+    if (!rl.allowed) {
+      res.setHeader('Retry-After', String(rl.retryAfter || 60));
+      throw ApiError.tooManyRequests('Muitas tentativas. Tente novamente em alguns minutos.');
+    }
     const body = parseBody(LoginSchema, await readBody(req));
     const user = (await q(`SELECT * FROM users WHERE email = $1 AND active = 1`, [body.email]))[0] as any;
     if (!user || !(await verifyPassword(body.password, user.password_hash))) {
@@ -61,10 +69,7 @@ export const authRouter = asyncHandler(async (req, res, url) => {
   if (path === '/auth/password' && method === 'PUT') {
     const user = await authenticate(req);
     if (!user) throw ApiError.unauthorized();
-    const body = await readBody(req);
-    if (!body?.current_password || !body?.new_password) throw ApiError.validation('Senha atual e nova senha são obrigatórias');
-    if (body.new_password.length < 6) throw ApiError.validation('Nova senha deve ter ao menos 6 caracteres');
-    if (body.new_password !== body.confirm_password) throw ApiError.validation('Confirmação de senha não confere');
+    const body = parseBody(ChangePasswordSchema, await readBody(req));
     const stored = (await q(`SELECT password_hash FROM users WHERE id = $1`, [user.id]))[0] as any;
     if (!stored || !(await verifyPassword(body.current_password, stored.password_hash))) {
       throw ApiError.unauthorized('Senha atual incorreta');
@@ -77,11 +82,11 @@ export const authRouter = asyncHandler(async (req, res, url) => {
   if (path === '/auth/register' && method === 'POST') {
     const user = await authenticate(req);
     if (!user || user.role !== 'admin') throw ApiError.forbidden('Apenas admin');
-    const body = await readBody(req);
-    const id = `usr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const body = parseBody(RegisterUserSchema, await readBody(req));
+    const id = `usr_${nanoid(16)}`;
     const hash = await hashPassword(body.password);
     await qe(`INSERT INTO users (id, email, name, password_hash, role) VALUES ($1, $2, $3, $4, $5)`,
-      [id, body.email, body.name, hash, body.role || 'atendente']);
+      [id, body.email, body.name, hash, body.role]);
     return json(res, 201, { id });
   }
 

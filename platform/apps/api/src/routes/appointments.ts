@@ -34,6 +34,7 @@ export const appointmentsRouter = asyncHandler(async (req, res, url) => {
     return json(res, 200, { ok: true });
   }
   if (idMatch && method === 'DELETE') {
+    if (user.role === 'atendente') throw ApiError.forbidden('Apenas admin/gestor pode excluir agendamentos');
     await AppointmentRepository.delete(idMatch[1]);
     publish('appointments', 'deleted', { id: idMatch[1] });
     return json(res, 200, { ok: true });

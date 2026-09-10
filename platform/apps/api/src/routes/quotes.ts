@@ -348,6 +348,7 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
     return json(res, 200, { ok: true });
   }
   if (idMatch && method === 'DELETE') {
+    if (user.role === 'atendente') throw ApiError.forbidden('Apenas admin/gestor pode deletar orçamentos');
     await QuoteRepository.update(idMatch[1], { status: 'deleted' });
     publish('quotes', 'deleted', { id: idMatch[1] });
     return json(res, 200, { ok: true });
@@ -494,9 +495,11 @@ export const quotesRouter = asyncHandler(async (req, res, url) => {
     return json(res, 201, { id, number });
   }
 
-  // GET /quotes/expiring/notify — verifica orçamentos próximos da expiração
+  // POST /quotes/expiring/notify — verifica orçamentos próximos da expiração
+  // (POST para não ser acidentalmente disparado via prefetch/cache)
   const expMatch = path.match(/^\/quotes\/expiring\/notify$/);
-  if (expMatch && method === 'GET') {
+  if (expMatch && method === 'POST') {
+    if (user.role === 'atendente') throw ApiError.forbidden('Apenas admin/gestor');
     const expiring = await QuoteRepository.findExpiringSoon(3);
     for (const q of expiring) {
       await createNotification({

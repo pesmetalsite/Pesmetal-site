@@ -11,6 +11,30 @@ export const LoginSchema = z.object({
   password: z.string().min(6, 'Senha muito curta'),
 });
 
+/** Política de senha forte: mínimo 10 chars, mix de letras+números. */
+const StrongPasswordSchema = z.string()
+  .min(10, 'Senha deve ter ao menos 10 caracteres')
+  .max(128, 'Senha muito longa')
+  .refine((s) => /[a-z]/.test(s) && /[A-Z\d\W]/.test(s), {
+    message: 'Senha deve ter ao menos uma letra minúscula e um número/símbolo',
+  });
+
+export const ChangePasswordSchema = z.object({
+  current_password: z.string().min(1, 'Senha atual obrigatória'),
+  new_password: StrongPasswordSchema,
+  confirm_password: z.string(),
+}).refine((d) => d.new_password === d.confirm_password, {
+  message: 'Confirmação de senha não confere',
+  path: ['confirm_password'],
+});
+
+export const RegisterUserSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1),
+  password: StrongPasswordSchema,
+  role: z.enum(['admin', 'gestor', 'atendente']).default('atendente'),
+});
+
 export const CreateUserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),

@@ -64,7 +64,7 @@ export const ContactRepository = {
     return id;
   },
   async update(id: string, fields: Partial<ContactRow>): Promise<void> {
-    const allowed: (keyof ContactRow)[] = ['Name', 'custom_name', 'email', 'company', 'avatar', 'tags', 'whatsapp_id', 'phone', 'document', 'address_line', 'address_city', 'address_state', 'address_zip', 'address_neighborhood', 'state_registration', 'no_automation', 'is_favorite'];
+    const allowed: (keyof ContactRow)[] = ['name', 'custom_name', 'email', 'company', 'avatar', 'tags', 'whatsapp_id', 'phone', 'document', 'address_line', 'address_city', 'address_state', 'address_zip', 'address_neighborhood', 'state_registration', 'no_automation', 'is_favorite'];
     const sets: string[] = [];
     const params: any[] = [];
     for (const k of allowed) {

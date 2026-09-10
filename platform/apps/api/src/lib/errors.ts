@@ -13,6 +13,7 @@ export type ErrorCode =
   | 'unauthorized'
   | 'forbidden'
   | 'conflict'
+  | 'too_many_requests'
   | 'rate_limited'
   | 'integration_error'
   | 'automation_error'
@@ -45,6 +46,9 @@ export class ApiError extends Error {
   }
   static conflict(message: string) {
     return new ApiError(409, 'conflict', message);
+  }
+  static tooManyRequests(msg = 'Muitas requisições') {
+    return new ApiError(429, 'too_many_requests', msg);
   }
   static integration(message: string, details?: unknown) {
     return new ApiError(502, 'integration_error', message, details);

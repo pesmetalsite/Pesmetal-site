@@ -8,6 +8,25 @@ import { ConversationRepository, MessageRepository } from '../repositories/conve
 import { startAutomation, processIncomingMessage } from '../services/automation.js';
 import { createNotification } from '../services/notifications.js';
 import { logger } from '../lib/logger.js';
+import { checkRateLimit } from '../lib/rateLimit.js';
+import crypto from 'node:crypto';
+
+/** Verifica assinatura HMAC do webhook da Evolution API. */
+function verifyWebhookSignature(req: any, rawBody: string): boolean {
+  const secret = process.env.EVOLUTION_WEBHOOK_SECRET;
+  if (!secret) {
+    // Em produção, secret é obrigatório. Em dev, aceita sem verificação.
+    return process.env.NODE_ENV !== 'production';
+  }
+  const signature = req.headers['x-evolution-signature'] || req.headers['x-webhook-signature'];
+  if (!signature) return false;
+  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+  try {
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+}
 
 function isBusinessHour(): boolean {
   const now = new Date();
@@ -42,11 +61,31 @@ export async function webhookHandler(req: any, res: any, url: URL) {
   const path = url.pathname;
 
   if (path === '/webhook/evolution' && req.method === 'POST') {
+    // Rate limit: 200 webhooks/min por IP
+    const rl = checkRateLimit(req, { windowMs: 60_000, max: 200 });
+    if (!rl.allowed) {
+      return json(res, 429, { error: 'Too many requests' });
+    }
+
+    // Lê raw body para verificação de assinatura
+    let rawBody = '';
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    rawBody = Buffer.concat(chunks).toString('utf8');
+
+    if (!verifyWebhookSignature(req, rawBody)) {
+      logger.warn('webhook signature invalid', { ip: req.socket?.remoteAddress });
+      return json(res, 401, { error: 'Invalid signature' });
+    }
+
+    let body: any;
+    try { body = rawBody ? JSON.parse(rawBody) : {}; } catch {
+      return json(res, 400, { error: 'Invalid JSON' });
+    }
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true }));
 
-    let body: any;
-    try { body = await readBody(req); } catch { return; }
     try {
       await handleEvolutionEvent(body);
     } catch (e: any) {

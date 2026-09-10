@@ -6,10 +6,16 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { q, q1, qe } from './db.js';
 import { nanoid } from 'nanoid';
+import { logger } from './logger.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '10');
+// JWT_SECRET obrigatório e ≥32 chars. Sem fallback hardcoded.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET deve ser definido e ter pelo menos 32 caracteres');
+}
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
+const bcryptRoundsRaw = parseInt(process.env.BCRYPT_ROUNDS || '10', 10);
+const BCRYPT_ROUNDS = Math.max(8, Math.min(Number.isFinite(bcryptRoundsRaw) ? bcryptRoundsRaw : 10, 14));
 
 export type Role = 'admin' | 'gestor' | 'atendente';
 
@@ -33,7 +39,11 @@ export async function ensureAdminUser() {
       INSERT INTO users (id, email, name, password_hash, role)
       VALUES ($1, $2, $3, $4, 'admin')
     `, [nanoid(), email, 'Administrador', hash]);
-    console.log(`✓ Usuário admin criado: ${email}`);
+    // Log estruturado SEM dados sensíveis (sem email/password)
+    logger.info('admin user ensured', { email_domain: email.split('@')[1] || 'local' });
+    if (!process.env.ADMIN_PASSWORD) {
+      logger.warn('admin password was auto-generated — set ADMIN_PASSWORD env var');
+    }
   }
 }
 
@@ -46,12 +56,12 @@ export async function verifyPassword(plain: string, hash: string) {
 }
 
 export function signToken(payload: { userId: string; role: Role; email: string }) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] });
+  return jwt.sign({ ...payload }, JWT_SECRET as jwt.Secret, { expiresIn: JWT_EXPIRES_IN as any });
 }
 
 export function verifyToken(token: string) {
   try {
-    return jwt.verify(token, JWT_SECRET) as { userId: string; role: Role; email: string; iat: number; exp: number };
+    return jwt.verify(token, JWT_SECRET as jwt.Secret) as unknown as { userId: string; role: Role; email: string; iat: number; exp: number };
   } catch {
     return null;
   }

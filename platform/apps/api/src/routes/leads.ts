@@ -47,6 +47,13 @@ export const leadsRouter = asyncHandler(async (req, res, url) => {
 
   if (idMatch && method === 'PUT') {
     const body = parseBody(UpdateLeadSchema, await readBody(req));
+    // Mass assignment protection: atendente NÃO pode alterar status, assigned_user_id, estimated_value
+    if (user.role === 'atendente') {
+      delete (body as any).status;
+      delete (body as any).assigned_user_id;
+      delete (body as any).estimated_value;
+      delete (body as any).priority;
+    }
     await LeadRepository.updateFields(idMatch[1], body as Partial<LeadRow>);
     await recordEvent({ lead_id: idMatch[1], user_id: user.id, type: 'lead_updated', description: 'Lead atualizado' });
     return json(res, 200, { ok: true });

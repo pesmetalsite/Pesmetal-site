@@ -9,7 +9,7 @@ import { migrate, seedDefaults } from './lib/db.js';
 import { ensureAdminUser } from './lib/auth.js';
 import { logger } from './lib/logger.js';
 import { ApiError, serializeError } from './lib/errors.js';
-import { corsHeaders } from './lib/http.js';
+import { corsHeaders, securityHeaders } from './lib/http.js';
 import { authRouter } from './routes/auth.js';
 import { leadsRouter } from './routes/leads.js';
 import { kanbanRouter } from './routes/kanban.js';
@@ -61,7 +61,9 @@ const routes: Array<{ prefix: string; handler: (req: any, res: any, url: URL) =>
 
 const server = http.createServer(async (req, res) => {
   const t0 = Date.now();
-  Object.entries(corsHeaders()).forEach(([k, v]) => res.setHeader(k, v));
+  const origin = req.headers.origin as string | undefined;
+  Object.entries(corsHeaders(origin)).forEach(([k, v]) => res.setHeader(k, v as string));
+  Object.entries(securityHeaders()).forEach(([k, v]) => res.setHeader(k, v as string));
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     return res.end();
