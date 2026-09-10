@@ -126,7 +126,7 @@ function LoginForm() {
         </form>
 
         <p className="text-center text-[11px] text-text-muted mt-6">
-          © {new Date().getFullYear()} Pes Metal · Caldeiraria · Soldagem · Usinagem
+          © {new Date().getFullYear()} PesMetal · Caldeiraria · Soldagem · Usinagem
         </p>
       </div>
     </div>

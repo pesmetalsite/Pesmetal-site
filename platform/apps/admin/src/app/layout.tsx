@@ -3,7 +3,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'PESMETAL Admin — Painel Comercial',
-  description: 'Painel administrativo da Pes Metal',
+  description: 'Painel administrativo da PesMetal',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

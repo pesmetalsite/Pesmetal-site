@@ -31,7 +31,7 @@ export default function Home() {
   const [scrolled, setScrolled] = useState(false)
   const [company, setCompany] = useState({
     company_whatsapp: '',
-    company_name: 'Pes Metal',
+    company_name: 'PesMetal',
     company_experience_years: '30',
     company_about: ''
   })
@@ -102,7 +102,7 @@ export default function Home() {
   }, [])
 
   const wa = (company.company_whatsapp || DEFAULT_WA).replace(/\D/g, '')
-  const waLink = `https://wa.me/${wa}?text=${encodeURIComponent('Olá! Vim pelo site da Pes Metal e gostaria de um orçamento.')}`
+  const waLink = `https://wa.me/${wa}?text=${encodeURIComponent('Olá! Vim pelo site da PesMetal e gostaria de um orçamento.')}`
 
   const track = (label: string) => {
     const session = localStorage.getItem('pesmetal_session')
@@ -158,7 +158,7 @@ export default function Home() {
           <a href="#" className="logo">
             <div className="logo-mark">PM</div>
             <div>
-              <div className="logo-name">PES METAL</div>
+              <div className="logo-name">PESMETAL</div>
               <div className="logo-tagline">Caldeiraria · Soldagem · Usinagem</div>
             </div>
           </a>
@@ -244,14 +244,14 @@ export default function Home() {
 
           <div className="hero-visual">
             <div className="hero-img-frame">
-              <img src="/images/hero-soldagem.jpg" alt="Soldagem industrial Pes Metal" loading="eager" />
+              <img src="/images/hero-soldagem.jpg" alt="Soldagem industrial PesMetal" loading="eager" />
             </div>
 
             <div className="hero-stamp">
               <svg viewBox="0 0 100 100" className="hero-stamp-svg">
                 <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="1" />
                 <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="1" />
-                <text x="50" y="32" textAnchor="middle" className="hero-stamp-text">·  PES METAL  ·</text>
+                <text x="50" y="32" textAnchor="middle" className="hero-stamp-text">·  PESMETAL  ·</text>
                 <text x="50" y="50" textAnchor="middle" className="hero-stamp-num">30</text>
                 <text x="50" y="62" textAnchor="middle" className="hero-stamp-text">ANOS</text>
                 <text x="50" y="76" textAnchor="middle" className="hero-stamp-small">DESDE 1993</text>
@@ -260,16 +260,16 @@ export default function Home() {
 
             <div className="hero-spec-card">
               <div className="hero-spec-row">
-                <span className="hero-spec-label">Capacidade</span>
-                <span className="hero-spec-value">até 20 ton</span>
+                <span className="hero-spec-label">Caldeiraria</span>
+                <span className="hero-spec-value">Leve · Média · Pesada</span>
               </div>
               <div className="hero-spec-row">
-                <span className="hero-spec-label">Soldagem</span>
-                <span className="hero-spec-value">MIG/TIG/EPS</span>
+                <span className="hero-spec-label">Soldagem EPS</span>
+                <span className="hero-spec-value">MIG/TIG qualificada</span>
               </div>
               <div className="hero-spec-row">
-                <span className="hero-spec-label">Prazo</span>
-                <span className="hero-spec-value">24h resp.</span>
+                <span className="hero-spec-label">Usinagem CNC</span>
+                <span className="hero-spec-value">Precisão dimensional</span>
               </div>
             </div>
           </div>
@@ -386,7 +386,7 @@ export default function Home() {
               <h2>Fornecedor de referência para a indústria pesada</h2>
               <p>
                 {company.company_about ||
-                  'A Pes Metal é fornecedora de componentes e estruturas metálicas para operações que não podem parar. Trabalhamos com manutenção industrial, fabricação sob desenho e recuperação de equipamentos — sempre com controle de qualidade documentado e entrega no prazo.'}
+                  'A PesMetal é fornecedora de componentes e estruturas metálicas para operações que não podem parar. Trabalhamos com manutenção industrial, fabricação sob desenho e recuperação de equipamentos — sempre com controle de qualidade documentado e entrega no prazo.'}
               </p>
 
               <ul className="qual-list">
@@ -592,7 +592,7 @@ export default function Home() {
               <div className="logo" style={{ marginBottom: 20 }}>
                 <div className="logo-mark">PM</div>
                 <div>
-                  <div className="logo-name" style={{ color: '#fff' }}>PES METAL</div>
+                  <div className="logo-name" style={{ color: '#fff' }}>PESMETAL</div>
                   <div className="logo-tagline" style={{ color: 'rgba(255,255,255,0.7)' }}>Caldeiraria · Soldagem · Usinagem</div>
                 </div>
               </div>
@@ -628,7 +628,7 @@ export default function Home() {
             </div>
           </div>
           <div className="footer-bottom">
-            <span>© {new Date().getFullYear()} Pes Metal</span>
+            <span>© {new Date().getFullYear()} PesMetal</span>
             <span>Sorocaba/SP · Atendemos todo o Brasil</span>
             <a
               href="/login"

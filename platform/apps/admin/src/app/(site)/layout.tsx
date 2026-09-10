@@ -3,15 +3,15 @@ import './site.css'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://pesmetal.com.br'),
-  title: 'Pes Metal — Caldeiraria & Soldagem Industrial | Sorocaba/SP',
+  title: 'PesMetal — Caldeiraria & Soldagem Industrial | Sorocaba/SP',
   description: 'Há mais de 30 anos fabricando caldeiraria pesada, soldagem especializada, usinagem de precisão e projetos industriais em Sorocaba/SP. Indústria, mineração e construção civil em todo o Brasil.',
-  keywords: 'caldeiraria pesada, caldeiraria sorocaba, soldagem industrial, usinagem, fabricação industrial, projetos industriais, recuperação de caçambas, dentes CASE, Pes Metal',
+  keywords: 'caldeiraria pesada, caldeiraria sorocaba, soldagem industrial, usinagem, fabricação industrial, projetos industriais, recuperação de caçambas, dentes CASE, PesMetal',
   openGraph: {
-    title: 'Pes Metal — Caldeiraria & Soldagem Industrial',
+    title: 'PesMetal — Caldeiraria & Soldagem Industrial',
     description: 'Soluções em caldeiraria, soldagem e usinagem com mais de 30 anos de experiência.',
     type: 'website',
     locale: 'pt_BR',
-    siteName: 'Pes Metal',
+    siteName: 'PesMetal',
     images: ['/images/hero-soldagem.jpg'],
   },
   robots: { index: true, follow: true },
