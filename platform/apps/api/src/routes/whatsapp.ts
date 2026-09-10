@@ -106,8 +106,9 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
   if (convMatch && method === 'GET') {
     const row = await q1(`
       SELECT wc.*, c.name as contact_name, c.custom_name, c.phone as contact_phone, c.company as contact_company,
-             c.is_favorite, c.no_automation,
+             c.is_favorite, c.no_automation, c.tags as contact_tags,
              l.name as lead_name, l.stage_id, ps.name as stage_name, ps.color as stage_color,
+             l.source as lead_source, l.campaign, l.utm_campaign, l.utm_source, l.utm_medium, l.adset, l.ad_name, l.fbclid, l.utm_content,
              (SELECT content FROM whatsapp_messages WHERE conversation_id = wc.id ORDER BY created_at DESC, id DESC LIMIT 1) AS last_message
       FROM whatsapp_conversations wc
       JOIN contacts c ON c.id = wc.contact_id

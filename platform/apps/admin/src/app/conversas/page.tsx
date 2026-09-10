@@ -593,6 +593,12 @@ export default function ConversasPage() {
                 <Row label="Lead" value={active.lead_name} />
                 <Row label="Etapa" value={active.stage_name} />
                 <Row label="Origem" value="WhatsApp" />
+                {active.campaign && <Row label="Campanha" value={active.campaign} />}
+                {active.utm_source && <Row label="UTM Source" value={active.utm_source} />}
+                {active.utm_medium && <Row label="UTM Medium" value={active.utm_medium} />}
+                {active.utm_campaign && <Row label="UTM Campaign" value={active.utm_campaign} />}
+                {active.fbclid && <Row label="Meta Ads" value="Facebook/Instagram Ads" />}
+                {active.contact_tags && <Row label="Tags" value={active.contact_tags} />}
                 <Row label="Status" value={STATUS_LABEL[active.status] || active.status} />
                 <Row label="Automação" value={active.automation_status} />
                 <Row label="Responsável" value={active.assigned_user_id || '—'} />
