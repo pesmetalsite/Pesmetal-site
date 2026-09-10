@@ -69,5 +69,21 @@ export const migrateRouter = asyncHandler(async (req, res, url) => {
     }
   }
 
+  // POST /migrate/automation-steps — adiciona colunas steps/step_options em automations + client_id em whatsapp_messages
+  if (path === '/migrate/automation-steps' && req.method === 'POST') {
+    try {
+      await pool.query(`ALTER TABLE automations ADD COLUMN IF NOT EXISTS steps text`);
+      await pool.query(`ALTER TABLE automations ADD COLUMN IF NOT EXISTS step_options text`);
+      await pool.query(`ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS client_id text`);
+      await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_whatsapp_messages_client_id ON whatsapp_messages(client_id) WHERE client_id IS NOT NULL`);
+      return json(res, 200, { ok: true, message: 'Automation steps + client_id columns ensured' });
+    } catch (e: any) {
+      if (e.code === '42701') {
+        return json(res, 200, { ok: true, message: 'Columns already exist' });
+      }
+      return json(res, 500, { error: e.message });
+    }
+  }
+
   throw ApiError.notFound('Migration endpoint');
 });
