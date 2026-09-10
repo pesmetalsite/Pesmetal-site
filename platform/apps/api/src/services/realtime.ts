@@ -17,7 +17,18 @@ bus.setMaxListeners(500);
 
 /** Publica um evento para todos os subscribers (apenas admin/gestor). */
 export function publish(entity: string, action: 'created' | 'updated' | 'deleted', data: Payload) {
-  bus.emit('event', JSON.stringify({ entity, action, data, ts: new Date().toISOString() }));
+  const event = { entity, action, data, ts: new Date().toISOString() };
+  bus.emit('event', JSON.stringify(event));
+  recentEvents.push(event);
+  if (recentEvents.length > MAX_EVENTS) recentEvents.shift();
+}
+
+/** Retorna últimos 50 eventos (para polling REST). */
+const recentEvents: Array<{ entity: string; action: 'created' | 'updated' | 'deleted'; data: Payload; ts: string }> = [];
+const MAX_EVENTS = 50;
+
+export function getRecentEvents() {
+  return [...recentEvents];
 }
 
 /** Abre uma conexão SSE. Retorna função de cleanup. */

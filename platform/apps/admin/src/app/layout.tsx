@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import ClientLayout from './ClientLayout'
 
 export const metadata: Metadata = {
   title: 'PESMETAL Admin — Painel Comercial',
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        <ClientLayout>{children}</ClientLayout>
+      </body>
     </html>
   )
 }

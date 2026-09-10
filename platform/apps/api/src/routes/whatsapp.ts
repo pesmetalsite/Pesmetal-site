@@ -106,6 +106,7 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
   if (convMatch && method === 'GET') {
     const row = await q1(`
       SELECT wc.*, c.name as contact_name, c.custom_name, c.phone as contact_phone, c.company as contact_company,
+             c.is_favorite, c.no_automation,
              l.name as lead_name, l.stage_id, ps.name as stage_name, ps.color as stage_color,
              (SELECT content FROM whatsapp_messages WHERE conversation_id = wc.id ORDER BY created_at DESC, id DESC LIMIT 1) AS last_message
       FROM whatsapp_conversations wc
@@ -118,16 +119,34 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
     return json(res, 200, { conversation: row });
   }
 
-  // PATCH /whatsapp/conversations/:id/name — nome personalizado sem destruir o original
+  // PATCH /whatsapp/conversations/:id — atualizar conversa ou favorito/automação
   if (convMatch && method === 'PATCH') {
     const body = await readBody(req);
     const conv = await ConversationRepository.findById(convMatch[1]);
     if (!conv) throw ApiError.notFound('Conversa');
     const contact = await ContactRepository.findById(conv.contact_id);
     if (!contact) throw ApiError.notFound('Contato');
-    const customName = body?.custom_name == null ? null : String(body.custom_name).trim() || null;
-    await ContactRepository.update(contact.id, { custom_name: customName });
-    return json(res, 200, { ok: true, custom_name: customName, display_name: customName || contact.name || contact.phone });
+
+    // Toggle favorito
+    if (body?.favorite !== undefined) {
+      await ContactRepository.update(contact.id, { is_favorite: Boolean(body.favorite) });
+      return json(res, 200, { ok: true, is_favorite: Boolean(body.favorite) });
+    }
+
+    // Toggle automação
+    if (body?.no_automation !== undefined) {
+      await ContactRepository.update(contact.id, { no_automation: Boolean(body.no_automation) });
+      return json(res, 200, { ok: true, no_automation: Boolean(body.no_automation) });
+    }
+
+    // Nome customizado
+    if (body?.custom_name !== undefined) {
+      const customName = body.custom_name == null ? null : String(body.custom_name).trim() || null;
+      await ContactRepository.update(contact.id, { custom_name: customName });
+      return json(res, 200, { ok: true, custom_name: customName, display_name: customName || contact.name || contact.phone });
+    }
+
+    return json(res, 200, { ok: true });
   }
 
   // POST /whatsapp/conversations/:id/close — finaliza atendimento humano e arma novo ciclo

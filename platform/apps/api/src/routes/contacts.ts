@@ -19,6 +19,7 @@ export const contactsRouter = asyncHandler(async (req, res, url) => {
   if (!user) throw ApiError.unauthorized();
   const path = url.pathname;
   const method = req.method;
+  const body = ['POST', 'PUT', 'PATCH'].includes(method) ? await readBody(req) : {};
 
   // GET /contacts — listagem + busca
   if (path === '/contacts' && method === 'GET') {
@@ -29,7 +30,6 @@ export const contactsRouter = asyncHandler(async (req, res, url) => {
 
   // POST /contacts — cria cliente
   if (path === '/contacts' && method === 'POST') {
-    const body = await readBody(req);
     const name = String(body?.name || '').trim();
     const phone = normalizePhone(body?.phone || '');
     if (!name) throw ApiError.validation('Nome do cliente é obrigatório');
@@ -66,7 +66,6 @@ export const contactsRouter = asyncHandler(async (req, res, url) => {
 
   // PUT /contacts/:id — atualiza dados do cliente
   if (idMatch && method === 'PUT') {
-    const body = await readBody(req);
     const contact = await ContactRepository.findById(idMatch[1]);
     if (!contact) throw ApiError.notFound('Cliente');
     const fields: any = {};
@@ -93,6 +92,28 @@ export const contactsRouter = asyncHandler(async (req, res, url) => {
     await qe(`DELETE FROM contacts WHERE id = $1`, [idMatch[1]]);
     publish('contacts', 'deleted', { id: idMatch[1] });
     return json(res, 200, { ok: true });
+  }
+
+  // PATCH /contacts/:id/automation — toggle no_automation
+  const autoMatch = path.match(/^\/contacts\/([^\/]+)\/automation$/);
+  if (autoMatch && method === 'PATCH') {
+    const contact = await ContactRepository.findById(autoMatch[1]);
+    if (!contact) throw ApiError.notFound('Cliente');
+    const noAutomation = body?.no_automation !== undefined ? Boolean(body.no_automation) : !contact.no_automation;
+    await ContactRepository.update(contact.id, { no_automation: noAutomation });
+    publish('contacts', 'updated', { id: contact.id, no_automation: noAutomation });
+    return json(res, 200, { ok: true, no_automation: noAutomation });
+  }
+
+  // PATCH /contacts/:id/favorite — toggle is_favorite
+  const favMatch = path.match(/^\/contacts\/([^\/]+)\/favorite$/);
+  if (favMatch && method === 'PATCH') {
+    const contact = await ContactRepository.findById(favMatch[1]);
+    if (!contact) throw ApiError.notFound('Cliente');
+    const isFavorite = body?.is_favorite !== undefined ? Boolean(body.is_favorite) : !contact.is_favorite;
+    await ContactRepository.update(contact.id, { is_favorite: isFavorite });
+    publish('contacts', 'updated', { id: contact.id, is_favorite: isFavorite });
+    return json(res, 200, { ok: true, is_favorite: isFavorite });
   }
 
   throw ApiError.notFound('Endpoint contacts');

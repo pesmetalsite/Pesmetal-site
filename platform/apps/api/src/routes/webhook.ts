@@ -102,6 +102,13 @@ async function handleEvolutionEvent(event: any) {
   }
 
   const remoteJid = key?.remoteJid || '';
+
+  // Ignora grupos
+  if (remoteJid.endsWith('@g.us')) {
+    logger.debug('group message ignored', { remoteJid });
+    return;
+  }
+
   const messageId = key?.id || '';
   const phone = remoteJid.split('@')[0].replace(/\D/g, '');
   const pushName = data?.pushName || '';
@@ -125,35 +132,16 @@ async function handleEvolutionEvent(event: any) {
   const instanceName = await resolveInstanceName(instanceId || instanceHint);
 
   let conv = await ConversationRepository.findByContactId(contactId, instanceId);
+
+  // Determina se é uma conversa NOVA (primeira mensagem)
+  const isNewConversation = !conv;
+
   if (!conv) {
     const id = await ConversationRepository.insert({ contact_id: contactId, instance_id: instanceId, status: 'active', automation_status: 'idle' });
     conv = (await ConversationRepository.findById(id))!;
   }
 
-  const leadWasMissing = !conv.lead_id;
-  let leadId = conv.lead_id;
-  if (!leadId) {
-    const { lead_id } = await createLead({
-      name: pushName || phone, phone, source: 'whatsapp', notes: 'Lead criado via WhatsApp',
-    });
-    leadId = lead_id;
-    await ConversationRepository.update(conv.id, { lead_id });
-    await recordEvent({ lead_id: leadId, type: 'whatsapp_started', description: 'Conversa WhatsApp iniciada' });
-  }
-
-  if (leadWasMissing && leadId) {
-    const leadRow = (await q1(`SELECT name, company, interest FROM leads WHERE id = $1`, [leadId])) as any;
-    const interest = leadRow?.interest || null;
-    const title = interest ? `Novo lead — ${interest}` : 'Novo lead';
-    await createNotification({
-      type: 'new_lead',
-      title,
-      body: `${leadRow?.name || pushName || phone}${leadRow?.company ? ` — ${leadRow.company}` : ''} · origem WhatsApp`,
-      data: { lead_id: leadId, contact_id: contactId, source: 'whatsapp', phone, interest },
-      leadId,
-    });
-  }
-
+  // Salva a mensagem primeiro
   await MessageRepository.insert({
     external_id: messageId || null,
     conversation_id: conv.id,
@@ -170,38 +158,70 @@ async function handleEvolutionEvent(event: any) {
     unread_count: (conv.unread_count || 0) + 1,
   });
 
-  // Atualiza última atividade do lead (reordena o Kanban)
+  // Cria lead se não existir
+  let leadId = conv.lead_id;
+  if (!leadId) {
+    const { lead_id } = await createLead({
+      name: pushName || phone, phone, source: 'whatsapp', notes: 'Lead criado via WhatsApp',
+    });
+    leadId = lead_id;
+    await ConversationRepository.update(conv.id, { lead_id });
+    await recordEvent({ lead_id: leadId, type: 'whatsapp_started', description: 'Conversa WhatsApp iniciada' });
+  }
+
+  // Atualiza última atividade do lead
   if (leadId) {
     await qe(`UPDATE leads SET last_activity_at = now(), updated_at = now() WHERE id = $1`, [leadId]);
   }
 
-  // Notificação de nova mensagem (conversa existente) — idempotente por external_id
-  if (!leadWasMissing && leadId) {
+  // Obtém dados do contato para notificações
+  const contact = (await q1(`SELECT * FROM contacts WHERE id = $1`, [contactId])) as any;
+  const displayName = contact?.custom_name || contact?.name || pushName || phone;
+
+  // Notificação popup para NOVA mensagem (sempre mostra, exceto se for lead novo)
+  if (!isNewConversation && leadId) {
+    // Truncar preview para 80 caracteres
+    let preview = text;
+    if (preview.length > 80) {
+      preview = preview.slice(0, 80) + '...';
+    } else if (!preview) {
+      preview = mediaType === 'image' ? '📷 Enviou uma imagem'
+               : mediaType === 'video' ? '🎥 Enviou um vídeo'
+               : mediaType === 'audio' ? '🎤 Enviou um áudio'
+               : mediaType === 'document' ? '📎 Enviou um documento'
+               : 'Enviou uma mensagem';
+    }
+
     await createNotification({
-      type: 'new_message',
-      title: `Nova mensagem — ${pushName || phone}`,
-      body: text ? `${text.slice(0, 120)}` : 'Enviou uma nova mensagem.',
-      data: { conversation_id: conv.id, lead_id: leadId, message_id: messageId, phone },
+      type: 'new_message_popup',
+      title: `Nova mensagem de ${displayName}`,
+      body: preview,
+      data: { conversation_id: conv.id, lead_id: leadId, message_id: messageId, phone, contact_id: contactId },
       leadId,
-      skipDedupe: true,
     });
   }
 
-  if (conv.automation_status !== 'paused' && conv.status !== 'human') {
-    if (conv.automation_status === 'idle') {
-      const offHoursMsg = !isBusinessHour() ? await getSetting('automation_off_hours_message') : null;
-      if (offHoursMsg) {
-        const { Evolution } = await import('../services/evolution.js');
-        try {
-          const number = phone.length <= 11 ? `55${phone}` : phone;
-          await Evolution.sendText({ number, text: offHoursMsg, instanceName });
-        } catch (e: any) {
-          logger.error('failed to send off-hours message', { error: String(e?.message || e) });
+  // Só inicia automação para NOVAS conversas e se não tiver no_automation
+  if (isNewConversation) {
+    // Verifica se contato tem automação desabilitada
+    if (contact?.no_automation) {
+      logger.info('automation skipped: contact has no_automation flag', { phone, contactId });
+    } else if (conv.automation_status !== 'paused' && conv.status !== 'human') {
+      if (conv.automation_status === 'idle') {
+        const offHoursMsg = !isBusinessHour() ? await getSetting('automation_off_hours_message') : null;
+        if (offHoursMsg) {
+          const { Evolution } = await import('../services/evolution.js');
+          try {
+            const number = phone.length <= 11 ? `55${phone}` : phone;
+            await Evolution.sendText({ number, text: offHoursMsg, instanceName });
+          } catch (e: any) {
+            logger.error('failed to send off-hours message', { error: String(e?.message || e) });
+          }
         }
+        await startAutomation(conv.id, undefined, instanceName);
+      } else {
+        await processIncomingMessage(conv.id, text, instanceName);
       }
-      await startAutomation(conv.id, undefined, instanceName);
-    } else {
-      await processIncomingMessage(conv.id, text, instanceName);
     }
   }
 }

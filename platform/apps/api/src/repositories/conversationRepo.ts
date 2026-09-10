@@ -98,11 +98,11 @@ export const ConversationRepository = {
     const limit = Math.min(Math.max(filter.limit ?? 50, 1), 200);
     const offset = Math.max(filter.offset ?? 0, 0);
     const rows = await q(`
-      SELECT wc.*, c.name as contact_name, c.custom_name, c.phone as contact_phone, c.company as contact_company,
+      SELECT wc.*, c.name as contact_name, c.custom_name, c.phone as contact_phone, c.company as contact_company, c.is_favorite as is_favorite,
              l.name as lead_name, l.stage_id, ps.name as stage_name, ps.color as stage_color,
              (SELECT content FROM whatsapp_messages WHERE conversation_id = wc.id ORDER BY created_at DESC, id DESC LIMIT 1) AS last_message
       ${base}
-      ORDER BY COALESCE(wc.last_message_at, wc.created_at) DESC NULLS LAST
+      ORDER BY c.is_favorite DESC, COALESCE(wc.last_message_at, wc.created_at) DESC NULLS LAST
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `, [...params, limit, offset]);
     return { conversations: rows, total };
