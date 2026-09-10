@@ -140,6 +140,16 @@ function readRawBody(req: any, maxBytes: number): Promise<Buffer> {
     const chunks: Buffer[] = [];
     let total = 0;
     let aborted = false;
+    let settled = false;
+
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      req.removeListener('data', onData);
+      req.removeListener('end', onEnd);
+      req.removeListener('error', onError);
+      fn();
+    };
 
     const onData = (c: Buffer) => {
       if (aborted) return;
@@ -148,39 +158,43 @@ function readRawBody(req: any, maxBytes: number): Promise<Buffer> {
         aborted = true;
         const err: any = new Error(`Arquivo muito grande (max ${maxBytes / 1024 / 1024}MB)`);
         err.statusCode = 413;
-        req.removeListener('data', onData);
-        req.removeListener('end', onEnd);
-        req.removeListener('error', onError);
-        return reject(err);
+        settle(() => reject(err));
+        return;
       }
       chunks.push(c);
     };
     const onEnd = () => {
       if (aborted) return;
-      resolve(Buffer.concat(chunks));
+      settle(() => resolve(Buffer.concat(chunks)));
     };
     const onError = (err: Error) => {
       if (aborted) return;
       aborted = true;
-      reject(err);
+      settle(() => reject(err));
     };
 
     req.on('data', onData);
     req.on('end', onEnd);
     req.on('error', onError);
 
-    // Se o body já chegou antes dos listeners (keep-alive, requests pequenas),
-    // 'end' já disparou. Forçamos a resolução imediata nesse caso.
-    if (req.readableEnded || req.complete) {
-      // Remove listeners registrados para evitar double-resolve.
-      req.removeListener('data', onData);
-      req.removeListener('end', onEnd);
-      req.removeListener('error', onError);
-      try {
-        resolve(Buffer.concat(chunks));
-      } catch (e) {
-        reject(e as Error);
+    // Edge case: Node >=18 pode emitir 'end' antes do listener se body for vazio.
+    // Mas se req.readableEnded E há dados pendentes (req.readable), lemos sincronamente.
+    if (req.readableEnded && chunks.length === 0) {
+      // Tenta consumir dados que possam ter ficado no buffer interno
+      let remaining: Buffer | null = null;
+      while ((remaining = req.read()) !== null) {
+        if (aborted) return;
+        const chunk = Buffer.isBuffer(remaining) ? remaining : Buffer.from(remaining);
+        total += chunk.length;
+        if (total > maxBytes) {
+          aborted = true;
+          const err: any = new Error(`Arquivo muito grande (max ${maxBytes / 1024 / 1024}MB)`);
+          err.statusCode = 413;
+          return settle(() => reject(err));
+        }
+        chunks.push(chunk);
       }
+      settle(() => resolve(Buffer.concat(chunks)));
     }
   });
 }
@@ -303,11 +317,6 @@ export async function uploadRouter(req: any, res: any, url: URL) {
       const boundary = `--${cleaned}`;
 
       const raw = await readRawBody(req, MAX_BYTES);
-      console.log('[upload] content-type:', ctype.slice(0, 200));
-      console.log('[upload] boundaryRaw:', boundaryRaw);
-      console.log('[upload] boundary:', boundary);
-      console.log('[upload] raw bytes:', raw.length);
-      console.log('[upload] first 100:', raw.slice(0, 100).toString('utf8').replace(/\n/g, '\\n'));
       const parts = parseMultipart(raw, boundary);
       const filePart = parts.find(p => p.name === 'file');
       if (!filePart || !filePart.data || filePart.data.length === 0) {
