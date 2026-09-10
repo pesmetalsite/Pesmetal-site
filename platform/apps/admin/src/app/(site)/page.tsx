@@ -268,8 +268,8 @@ export default function Home() {
                 <span className="hero-spec-value">MIG/TIG qualificada</span>
               </div>
               <div className="hero-spec-row">
-                <span className="hero-spec-label">Usinagem CNC</span>
-                <span className="hero-spec-value">Precisão dimensional</span>
+                <span className="hero-spec-label">Controle</span>
+                <span className="hero-spec-value">EPS + Dimensional</span>
               </div>
             </div>
           </div>
