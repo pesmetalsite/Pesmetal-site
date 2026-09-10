@@ -467,6 +467,15 @@ export default function ConversasPage() {
                     <div className="conv-item-sub">
                       {c.last_message ? (c.last_message.length > 80 ? c.last_message.slice(0, 80) + '…' : c.last_message) : (c.contact_phone || c.contact_company || 'Sem mensagens')}
                     </div>
+                    {(c.contact_tags || c.campaign || c.utm_source) && (
+                      <div className="conv-item-tags">
+                        {c.contact_tags && c.contact_tags.split(/[;,]/).filter(Boolean).slice(0, 3).map((t: string, i: number) => (
+                          <span key={i} className="conv-tag">{t.trim()}</span>
+                        ))}
+                        {c.campaign && <span className="conv-tag conv-tag-meta">📊 {c.campaign}</span>}
+                        {c.utm_source && c.utm_source.toLowerCase().includes('facebook') && <span className="conv-tag conv-tag-fb">Meta Ads</span>}
+                      </div>
+                    )}
                     <div className="conv-item-row2">
                       <span className="conv-item-ctx">
                         {c.stage_name || 'Sem etapa'} {badgeLabel(c) ? `· ${badgeLabel(c)} ${c.automation_status || ''}` : ''}
@@ -593,12 +602,32 @@ export default function ConversasPage() {
                 <Row label="Lead" value={active.lead_name} />
                 <Row label="Etapa" value={active.stage_name} />
                 <Row label="Origem" value="WhatsApp" />
-                {active.campaign && <Row label="Campanha" value={active.campaign} />}
-                {active.utm_source && <Row label="UTM Source" value={active.utm_source} />}
-                {active.utm_medium && <Row label="UTM Medium" value={active.utm_medium} />}
-                {active.utm_campaign && <Row label="UTM Campaign" value={active.utm_campaign} />}
-                {active.fbclid && <Row label="Meta Ads" value="Facebook/Instagram Ads" />}
-                {active.contact_tags && <Row label="Tags" value={active.contact_tags} />}
+                {(active.campaign || active.utm_campaign || active.fbclid || (active.utm_source && /facebook|fb|instagram|meta/i.test(active.utm_source))) && (
+                  <div className="conv-detail-row">
+                    <div className="label">Campanha</div>
+                    <div className="conv-detail-val">
+                      {active.campaign && <div className="conv-campaign-line"><strong>📊 {active.campaign}</strong></div>}
+                      {active.lead_source && <div className="conv-campaign-line">Origem: <span className="conv-source-pill">{active.lead_source}</span></div>}
+                      {active.utm_source && <div className="conv-campaign-line">UTM Source: <code>{active.utm_source}</code></div>}
+                      {active.utm_medium && <div className="conv-campaign-line">UTM Medium: <code>{active.utm_medium}</code></div>}
+                      {active.utm_campaign && <div className="conv-campaign-line">UTM Campaign: <code>{active.utm_campaign}</code></div>}
+                      {active.utm_content && <div className="conv-campaign-line">UTM Content: <code>{active.utm_content}</code></div>}
+                      {active.adset && <div className="conv-campaign-line">AdSet: <code>{active.adset}</code></div>}
+                      {active.ad_name && <div className="conv-campaign-line">Anúncio: <code>{active.ad_name}</code></div>}
+                      {active.fbclid && <div className="conv-campaign-line">📘 <strong>Meta Pixel Click ID:</strong> <code className="conv-fbclid">{active.fbclid}</code></div>}
+                    </div>
+                  </div>
+                )}
+                {active.contact_tags && (
+                  <div className="conv-detail-row">
+                    <div className="label">Tags</div>
+                    <div className="conv-detail-val conv-tags-display">
+                      {active.contact_tags.split(/[;,]/).filter(Boolean).map((t: string, i: number) => (
+                        <span key={i} className="conv-tag">{t.trim()}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <Row label="Status" value={STATUS_LABEL[active.status] || active.status} />
                 <Row label="Automação" value={active.automation_status} />
                 <Row label="Responsável" value={active.assigned_user_id || '—'} />

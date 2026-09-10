@@ -394,6 +394,22 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   font-size: 11px; color: var(--text-muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;
 }
+.conv-item-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.conv-tag {
+  display: inline-block; padding: 2px 7px; border-radius: 100px;
+  font-size: 9.5px; font-weight: 600; line-height: 1.4;
+  background: var(--bg-2); color: var(--text-dim);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.conv-tag-meta { background: rgba(99,102,241,.12); color: #6366f1; border-color: rgba(99,102,241,.25); }
+.conv-tag-fb { background: rgba(24,119,242,.12); color: #1877f2; border-color: rgba(24,119,242,.25); }
+.conv-campaign-line { font-size: 11px; color: var(--text-dim); padding: 2px 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.conv-campaign-line code { background: var(--bg-2); padding: 1px 5px; border-radius: 3px; font-size: 10px; color: var(--text); }
+.conv-campaign-line strong { color: var(--text); }
+.conv-source-pill { display: inline-block; padding: 2px 8px; border-radius: 100px; background: rgba(99,102,241,.15); color: #6366f1; font-size: 10px; font-weight: 700; }
+.conv-fbclid { font-family: monospace; font-size: 9.5px; word-break: break-all; }
+.conv-tags-display { display: flex; flex-wrap: wrap; gap: 5px; }
 .conv-item-row2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 5px; }
 .conv-item-ctx {
   font-size: 10px; color: var(--text-dim); font-weight: 500;
