@@ -13,7 +13,7 @@ const SERVICES = [
   { icon: Hammer, tag: 'Caldeiraria', title: 'Estruturas Pesadas', desc: 'Bases, pilares, vigas e grandes peças soldadas para mineração, siderurgia e construção civil.' },
   { icon: Wrench, tag: 'Caldeiraria', title: 'Estruturas Médias', desc: 'Mezaninos, escadas marinheiro, plataformas e bases para equipamentos industriais.' },
   { icon: Shield, tag: 'Soldagem', title: 'Soldagem Especializada', desc: 'Processos MIG, TIG, eletrodo e arame tubular com soldadores qualificados e EPS registrado.' },
-  { icon: Ruler, tag: 'Usinagem', title: 'Usinagem CNC', desc: 'Peças usinadas em tornos e fresadoras CNC conforme desenho técnico do cliente.' },
+  { icon: Cog, tag: 'Qualidade', title: 'Qualificação EPS', desc: 'Procedimentos de soldagem qualificados (EPS) e registro documental para normas técnicas aplicáveis.' },
   { icon: Cog, tag: 'Recuperação', title: 'Caçambas & Dentes', desc: 'Reparo estrutural e reforço em caçambas, dentes e suportes para máquinas pesadas.' },
   { icon: HardHat, tag: 'Fabricação', title: 'Sob Medida', desc: 'Projetos customizados da engenharia à entrega, com acabamento industrial.' },
 ]
@@ -23,7 +23,7 @@ const PROJECTS = [
   { img: '/images/cacamba-reparo.jpg', cat: 'Caldeiraria', title: 'Reparo Estrutural' },
   { img: '/images/oficina-portao.jpg', cat: 'Construção', title: 'Estruturas Metálicas' },
   { img: '/images/soldador-precisao.jpg', cat: 'Soldagem', title: 'Soldagem de Precisão' },
-  { img: '/images/pecas-fundidas.jpg', cat: 'Usinagem', title: 'Peças sob Desenho' },
+  { img: '/images/pecas-fundidas.jpg', cat: 'Qualidade', title: 'Controle Dimensional' },
   { img: '/images/produto-final.jpg', cat: 'Fabricação', title: 'Acabamento Industrial' },
 ]
 
@@ -159,7 +159,7 @@ export default function Home() {
             <div className="logo-mark">PM</div>
             <div>
               <div className="logo-name">PESMETAL</div>
-              <div className="logo-tagline">Caldeiraria · Soldagem · Usinagem</div>
+              <div className="logo-tagline">Caldeiraria · Soldagem EPS</div>
             </div>
           </a>
           <nav className="nav">
@@ -214,8 +214,8 @@ export default function Home() {
             </h1>
 
             <p className="hero-desc">
-              Caldeiraria, soldagem especializada e usinagem CNC para quem não pode parar.
-              Da engenharia ao acabamento — controle dimensional, EPS qualificado e
+              Caldeiraria pesada e soldagem EPS qualificada para quem não pode parar.
+              Da engenharia ao acabamento — controle dimensional, EPS documentado e
               entrega no prazo.
             </p>
 
@@ -348,7 +348,7 @@ export default function Home() {
               Capacidade de produção
             </div>
             <h2>Soluções em metalurgia pesada</h2>
-            <p>Da caldeiraria pesada à usinagem de precisão — cobrimos toda a cadeia de fabricação metalúrgica com qualidade documentada.</p>
+            <p>Da caldeiraria pesada à soldagem EPS qualificada — cobrimos toda a cadeia de fabricação metalúrgica com qualidade documentada.</p>
           </div>
 
           <div className="services-grid">
@@ -562,7 +562,7 @@ export default function Home() {
                   <option value="Caldeiraria Pesada">Caldeiraria Pesada</option>
                   <option value="Caldeiraria Média">Caldeiraria Média</option>
                   <option value="Soldagem Especializada">Soldagem Especializada</option>
-                  <option value="Usinagem CNC">Usinagem CNC</option>
+                  <option value="Qualificação EPS">Qualificação EPS</option>
                   <option value="Recuperação de Caçambas">Recuperação de Caçambas</option>
                   <option value="Fabricação Sob Medida">Fabricação Sob Medida</option>
                   <option value="Outro">Outro</option>
@@ -597,7 +597,7 @@ export default function Home() {
                 </div>
               </div>
               <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, maxWidth: 280, lineHeight: 1.7 }}>
-                {years}+ anos fornecendo soluções em caldeiraria, soldagem e usinagem para indústria pesada em todo o Brasil.
+                {years}+ anos fornecendo soluções em caldeiraria e soldagem EPS para indústria pesada em todo o Brasil.
               </p>
             </div>
             <div>
@@ -614,7 +614,7 @@ export default function Home() {
               <ul>
                 <li><a href="#servicos">Caldeiraria</a></li>
                 <li><a href="#servicos">Soldagem</a></li>
-                <li><a href="#servicos">Usinagem</a></li>
+                <li><a href="#servicos">Qualidade EPS</a></li>
                 <li><a href="#servicos">Recuperação</a></li>
               </ul>
             </div>
