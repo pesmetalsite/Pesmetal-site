@@ -1,0 +1,4 @@
+[     806ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://lucid-contentment-production-17bc.up.railway.app/appointments:0
+[     807ms] Error: Não autenticado
+    at a (https://pesmetal-admin.vercel.app/_next/static/chunks/app/agenda/page-1ed88db825081ef8.js:1:7079)
+    at async h (https://pesmetal-admin.vercel.app/_next/static/chunks/app/agenda/page-1ed88db825081ef8.js:1:410)

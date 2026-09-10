@@ -1,0 +1,13 @@
+[    5338ms] [WARNING] [Meta Pixel] - Duplicate Pixel ID: 2039769313287995. @ https://connect.facebook.net/en_US/fbevents.js:201
+[    6382ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://m.stripe.com/6:0
+[   11182ms] [WARNING] [Meta Pixel] - Duplicate Pixel ID: 2039769313287995. @ https://connect.facebook.net/en_US/fbevents.js:201
+[   11600ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://nexxus-pro.online/auth:0
+[   12005ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://m.stripe.com/6:0
+[   22985ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://iuvzpvhaxlrbwaitizci.supabase.co/auth/v1/token?grant_type=password:0
+[   22988ms] [ERROR] [login] error: AuthApiError: Invalid login credentials
+    at w0 (https://nexxus-pro.online/assets/index-BjGvRguh.js:152:10699)
+    at async wq (https://nexxus-pro.online/assets/index-BjGvRguh.js:152:11546)
+    at async z (https://nexxus-pro.online/assets/index-BjGvRguh.js:152:11274)
+    at async l5.signInWithPassword (https://nexxus-pro.online/assets/index-BjGvRguh.js:167:21224)
+    at async https://nexxus-pro.online/assets/index-BjGvRguh.js:168:66082
+    at async je (https://nexxus-pro.online/assets/AuthForm-M9qaDN9T.js:1:6241) @ https://nexxus-pro.online/assets/AuthForm-M9qaDN9T.js:0

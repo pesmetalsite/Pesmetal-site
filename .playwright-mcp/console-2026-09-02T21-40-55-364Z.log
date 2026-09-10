@@ -1,0 +1,17 @@
+[    8528ms] [LOG] %c%s color: red; background: yellow; font-size: 24px; AVISO @ https://www.gstatic.com/_/mss/boq-identity/_/js/k=boq-identity.AccountsSignInUi.pt_BR.UIIpCGun_2I.es5.O/am=IQIAAAAMeCMBQP7_vwEABBBsB3xfC6AJEDIAAAAAAAAAAIAFAABoCCA/d=1/excm=_b,_tp,accountchooserview/ed=1/dg=0/wt=2/ujg=1/rs=AOaEmlEiLaK1HKFPu3QiEbU77ZicMuvp9Q/dti=1/m=_b,_tp:560
+[    9349ms] [WARNING] The powerPreference option is currently ignored when calling requestAdapter() on Windows. See https://crbug.com/369219127 @ :0
+[   38117ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://github.com/github-copilot/chat/entitlement:0
+[   38644ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/dsj-4cca625a20b72565.js:0
+[   38646ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/uk-a9d1e009c1293cf2.js:0
+[   38667ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/20-cc44c13bd921d658.js:0
+[   38667ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/q-221b770c44764d2a.js:0
+[   38689ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/h.3eb2c606b5df0840.module.css:0
+[   38689ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/5.58bbec06d0fa94cd.module.css:0
+[   38690ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://api.github.com/_private/browser/stats:0
+[   38691ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/m5-74037f6c09650280.js:0
+[   38692ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/7a-232f7011c9bd5270.js:0
+[   38692ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/93-f1a2537dc917df3d.js:0
+[   38692ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/88-45e3ec79d617ef76.js:0
+[   38692ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/rdf-6b3bd4816f3ee137.js:0
+[   38692ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/chunk-h-2cc3a89c7db065b7.js:0
+[   38692ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/a13-46bb8ca9f7c9e5c1.js:0

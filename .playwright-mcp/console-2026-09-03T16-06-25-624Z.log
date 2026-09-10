@@ -1,0 +1,29 @@
+[    3352ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://github.com/github-copilot/chat/entitlement:0
+[    4151ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/ey.4a3779c8a082c0d0.module.css:0
+[    4157ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/g.cf15c6d8e6807b4e.module.css:0
+[    4200ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/h.e08c1c99a1c57b35.module.css:0
+[    4209ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/m5.ec3d9ac6913c2387.module.css:0
+[    4216ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/93.e2f78d4f2a1245d8.module.css:0
+[    4219ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/xu.63c820c01fd3765a.module.css:0
+[    4222ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/3.0818a6c9895a8e42.module.css:0
+[    4222ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/h0.9d579518cd604521.module.css:0
+[    4285ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/a6-a9f609e10f1587eb.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/ay-118ebbfcf8053111.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/g-3cf415e52851f837.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/q3-8b040399b5b52fa2.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/h-6863033533f2f3ac.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/1ae-13aff0e06f55977b.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/rlu-757220d1b0edc8c8.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/e84-4f0483ee8758d721.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/m5-ac1fcd4f491385ee.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/7a-779829e3491793a9.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/93-3bbd61073ba1d4c7.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/dg7-00dd475bea863874.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/xu-d88dde5917ff3f18.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/rdf-6b3bd4816f3ee137.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/3-7f23eab3b61b64b8.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/a13-aab44d307bc10cc9.js:0
+[    4286ms] [ERROR] Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES @ https://github.githubassets.com/assets/3d-42983808cb12b9a6.js:0
+[    6414ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://github.com/github-copilot/chat/entitlement:0
+[   76296ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://github.com/github-copilot/chat/entitlement:0
+[   77104ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://github.com/github-copilot/chat/entitlement:0

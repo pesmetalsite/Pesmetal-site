@@ -1,0 +1,19 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/agenda/page": "app/agenda/page.js",
+  "/api/whatsapp/qr/route": "app/api/whatsapp/qr/route.js",
+  "/api/whatsapp/status/route": "app/api/whatsapp/status/route.js",
+  "/api/whatsapp/webhook-url/route": "app/api/whatsapp/webhook-url/route.js",
+  "/automacoes/page": "app/automacoes/page.js",
+  "/clientes/page": "app/clientes/page.js",
+  "/conexoes/page": "app/conexoes/page.js",
+  "/configuracoes/page": "app/configuracoes/page.js",
+  "/conversas/page": "app/conversas/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/kanban/page": "app/kanban/page.js",
+  "/login/page": "app/login/page.js",
+  "/marketing/page": "app/marketing/page.js",
+  "/orcamentos/page": "app/orcamentos/page.js",
+  "/relatorios/page": "app/relatorios/page.js",
+  "/(site)/page": "app/(site)/page.js"
+}

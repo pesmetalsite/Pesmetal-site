@@ -1,0 +1,5 @@
+[     385ms] [LOG] [MP] SDK carregado @ http://localhost:8765/dropshipping-escova-secante/lp/mp-checkout.js:37
+[     629ms] [WARNING] [Meta Pixel] - Invalid PixelID: null. @ https://connect.facebook.net/en_US/fbevents.js:201
+[     929ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://api.mercadopago.com/v1/payment_methods/search?public_key=APP_USR-XXXXXXXX-XXXXXX-XXXXXX-XXXXXXXXXXXX&locale=pt-BR&js_version=2.74.5&referer=http%3A%2F%2Flocalhost%3A8765&marketplace=NONE&status=active&limit=1&public_key=APP_USR-XXXXXXXX-XXXXXX-XXXXXX-XXXXXXXXXXXX&product_id=BTR2N61O1F60OR8RLSGG:0
+[     936ms] Uncaught (in promise) #<Object>
+    at <anonymous> (https://sdk.mercadopago.com/js/v2:0:268634)

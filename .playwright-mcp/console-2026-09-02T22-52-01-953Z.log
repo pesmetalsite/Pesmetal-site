@@ -1,0 +1,165 @@
+[ 1353621ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/dashboard/leads-by-period' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/automacoes:0
+[ 1353622ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/dashboard/leads-by-period:0
+[ 1353622ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/dashboard/metrics' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/automacoes:0
+[ 1353623ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/dashboard/metrics:0
+[ 1353623ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/dashboard/funnel' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/automacoes:0
+[ 1353624ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/dashboard/funnel:0
+[ 1353632ms] TypeError: Failed to fetch
+    at s (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:8743)
+    at https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/page-94a40e9808e43869.js:1:965
+    at aW (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:73241)
+    at oe (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:84682)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85320)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85300)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:86265)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+[ 1353630ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/dashboard/leads-by-source' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/automacoes:0
+[ 1353630ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/dashboard/leads-by-source:0
+[ 1361793ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/settings/company' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1361793ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/settings/company:0
+[ 1361799ms] TypeError: Failed to fetch
+    at s (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:8743)
+    at https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/configuracoes/page-447884fd97fd8c9e.js:1:413
+    at aW (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:73241)
+    at oe (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:84682)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85320)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85300)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:86265)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+[ 1361797ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/settings/integrations' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1361797ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/settings/integrations:0
+[ 1363747ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/projects' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1363748ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/projects:0
+[ 1363751ms] TypeError: Failed to fetch
+    at s (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:8743)
+    at d (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/projetos/page-a79d99b8e1b8edce.js:1:410)
+    at https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/projetos/page-a79d99b8e1b8edce.js:1:477
+    at aW (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:73241)
+    at oe (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:84682)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85320)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85300)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:86265)
+[ 1364892ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/services' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1364892ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/services:0
+[ 1364895ms] TypeError: Failed to fetch
+    at s (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:8743)
+    at d (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/servicos/page-e98433198f1553f2.js:1:410)
+    at https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/servicos/page-e98433198f1553f2.js:1:477
+    at aW (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:73241)
+    at oe (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:84682)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85320)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85300)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:86265)
+[ 1367050ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/quotes' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1367050ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/quotes:0
+[ 1367051ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/leads' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1367051ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/leads:0
+[ 1367054ms] TypeError: Failed to fetch
+    at s (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:8743)
+    at x (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/orcamentos/page-098f04a023a1e87c.js:1:465)
+    at https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/orcamentos/page-098f04a023a1e87c.js:1:577
+    at aW (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:73241)
+    at oe (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:84682)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85320)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85300)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:86265)
+[ 1368176ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/whatsapp/status' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1368177ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/whatsapp/status:0
+[ 1368179ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/automations' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1368179ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/automations:0
+[ 1368182ms] TypeError: Failed to fetch
+    at s (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:8743)
+    at h (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:416)
+    at https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:578
+    at aW (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:73241)
+    at oe (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:84682)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85320)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85300)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:86265)
+[ 1369225ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/appointments' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1369225ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/appointments:0
+[ 1369226ms] TypeError: Failed to fetch
+    at s (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:8743)
+    at h (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/agenda/page-3165c0bd0a24308e.js:1:424)
+    at https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/agenda/page-3165c0bd0a24308e.js:1:499
+    at aW (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:73241)
+    at oe (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:84682)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85320)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85300)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:86265)
+[ 1370091ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/whatsapp/conversations' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1370092ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/whatsapp/conversations:0
+[ 1370096ms] TypeError: Failed to fetch
+    at s (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:8743)
+    at x (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/conversas/page-47f6de7b7ebdfec6.js:1:423)
+    at https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/conversas/page-47f6de7b7ebdfec6.js:1:562
+    at aW (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:73241)
+    at oe (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:84682)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85320)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85300)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:86265)
+[ 1370712ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/kanban/board' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1370713ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/kanban/board:0
+[ 1370717ms] TypeError: Failed to fetch
+    at s (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:8743)
+    at b (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/kanban/page-b53b5e46e7b529fd.js:1:3655)
+    at https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/kanban/page-b53b5e46e7b529fd.js:1:3725
+    at aW (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:73241)
+    at oe (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:84682)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85320)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85300)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:86265)
+[ 1371408ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/leads?' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1371408ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/leads?:0
+[ 1371409ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/kanban/stages' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1371409ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/kanban/stages:0
+[ 1371410ms] TypeError: Failed to fetch
+    at s (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:8743)
+    at x (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/leads/page-cf9697a0addeac67.js:1:577)
+    at https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/leads/page-cf9697a0addeac67.js:1:764
+    at aW (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:73241)
+    at oe (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:84682)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85320)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85300)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:86265)
+[ 1372168ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/dashboard/metrics' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1372169ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/dashboard/metrics:0
+[ 1372180ms] TypeError: Failed to fetch
+    at s (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/automacoes/page-b3a3b0cda37bf27e.js:1:8743)
+    at https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/app/page-94a40e9808e43869.js:1:965
+    at aW (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:73241)
+    at oe (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:84682)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85320)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85300)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+    at ol (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:86265)
+    at or (https://admin-aa3i2dqz9-consecom.vercel.app/_next/static/chunks/fd9d1056-818910da29c62ee1.js:1:85204)
+[ 1372179ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/dashboard/leads-by-period' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1372179ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/dashboard/leads-by-period:0
+[ 1372179ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/dashboard/funnel' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1372179ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/dashboard/funnel:0
+[ 1372180ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/dashboard/leads-by-source' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1372180ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/dashboard/leads-by-source:0
+[ 1380347ms] [ERROR] Access to fetch at 'https://lucid-contentment-production-17bc.up.railway.app/services' from origin 'https://admin-aa3i2dqz9-consecom.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://admin-aa3i2dqz9-consecom.vercel.app/:0
+[ 1380347ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://lucid-contentment-production-17bc.up.railway.app/services:0

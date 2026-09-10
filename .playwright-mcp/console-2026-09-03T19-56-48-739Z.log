@@ -1,0 +1,51 @@
+[     697ms] [LOG] %c
+▲
+
+    ____                               _ __
+   / __ \________  ____ _____ ___     (_) /_
+  / / / / ___/ _ \/ __ `/ __ `__ \   / / __/
+ / /_/ / /  /  __/ /_/ / / / / / /  / / /__
+/_____/_/   \___/\__,_/_/ /_/ /_/  /_/\__( )
+   _____ __    _          _ __           |/
+  / ___// /_  (_)___     (_) /_
+  \__ \/ __ \/ / __ \   / / __/
+ ___/ / / / / / /_/ /  / / /_
+/____/_/ /_/_/ .___/  /_/\__/
+            /_/
+  
+
+Hello!
+
+- Open Source https://vercel.com/oss
+- Careers https://vercel.com/careers
+- Status https://www.vercel-status.com
+
+ font-family: "Geist Mono", monospace; white-space: pre; line-height: 1; @ https://vercel.com/_next/static/immutable/chunks/09bognj3n0dzk.js:78
+[   10320ms] [WARNING] Deprecated API for given entry type. @ https://vercel.com/_next/static/immutable/chunks/3vuaw0m6zroe4.js:18
+[   12565ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://m.stripe.com/6:0
+[   18429ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/1zikulwq04u34.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   18429ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/0alwwayyf2lhy.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   18429ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/3l6n9tbuviet-.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   18429ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/3t_-x9195y9o-.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   18429ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/0kz5-i0nrwrgh.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   18429ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/373505qw2m2ws.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   18429ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/2jaw-bje_lms9.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   18429ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/3flhcz7cw314y.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   18429ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/3_5c1xwltru6n.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   18429ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/2auu4bhcsy3ul.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   18429ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/13z7f9ttqq03g.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   18429ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/0ufugx6-98l3p.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   18430ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/09laauv2h79wx.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33845ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/1zikulwq04u34.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33846ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/0alwwayyf2lhy.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33846ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/3l6n9tbuviet-.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33847ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/3t_-x9195y9o-.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33848ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/0kz5-i0nrwrgh.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33849ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/373505qw2m2ws.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33850ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/2jaw-bje_lms9.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33851ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/3flhcz7cw314y.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33852ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/3_5c1xwltru6n.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33852ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/2auu4bhcsy3ul.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33853ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/13z7f9ttqq03g.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33854ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/0ufugx6-98l3p.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0
+[   33857ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/09laauv2h79wx.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/pesmetal/pesmetal-site/connect:0

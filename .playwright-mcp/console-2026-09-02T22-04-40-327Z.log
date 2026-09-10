@@ -1,0 +1,47 @@
+[    1986ms] [INFO] 
+    _____
+ ___ |[]|_n__n_I_c
+|___||__|###|____}
+ O-O--O-O+++--O-O
+****************************************
+*                                      *
+*           Enjoying Railway?          *
+*                                      *
+*         Want to ride with us?        *
+*                                      *
+*              Hop aboard,             *
+*   the train is leaving the station!  *
+*                                      *
+*      https://railway.com/careers     *
+*                                      *
+****************************************
+ @ https://railway.com/assets/main-CpZcVgYT.js:64
+[    1987ms] [INFO] 
+    _____
+ ___ |[]|_n__n_I_c
+|___||__|###|____}
+ O-O--O-O+++--O-O
+****************************************
+*                                      *
+*           Enjoying Railway?          *
+*                                      *
+*         Want to ride with us?        *
+*                                      *
+*              Hop aboard,             *
+*   the train is leaving the station!  *
+*                                      *
+*      https://railway.com/careers     *
+*                                      *
+****************************************
+ @ https://railway.com/assets/main-CpZcVgYT.js:102
+[    3946ms] Error: Minified React error #421; visit https://reactjs.org/docs/error-decoder.html?invariant=421 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at cc (https://railway.com/assets/react-dom-DnBidG4-.js:8:9367)
+    at ac (https://railway.com/assets/react-dom-DnBidG4-.js:8:7321)
+    at Wl (https://railway.com/assets/react-dom-DnBidG4-.js:8:45245)
+    at Pl (https://railway.com/assets/react-dom-DnBidG4-.js:8:39294)
+    at Ml (https://railway.com/assets/react-dom-DnBidG4-.js:8:39225)
+    at jl (https://railway.com/assets/react-dom-DnBidG4-.js:8:39085)
+    at vl (https://railway.com/assets/react-dom-DnBidG4-.js:8:34264)
+    at te (https://railway.com/assets/react-dom-DnBidG4-.js:1:1616)
+    at MessagePort.se (https://railway.com/assets/react-dom-DnBidG4-.js:1:1986)
+[    5339ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://m.stripe.com/6:0

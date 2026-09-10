@@ -1,0 +1,34 @@
+[     942ms] [LOG] %c
+▲
+
+    ____                               _ __
+   / __ \________  ____ _____ ___     (_) /_
+  / / / / ___/ _ \/ __ `/ __ `__ \   / / __/
+ / /_/ / /  /  __/ /_/ / / / / / /  / / /__
+/_____/_/   \___/\__,_/_/ /_/ /_/  /_/\__( )
+   _____ __    _          _ __           |/
+  / ___// /_  (_)___     (_) /_
+  \__ \/ __ \/ / __ \   / / __/
+ ___/ / / / / / /_/ /  / / /_
+/____/_/ /_/_/ .___/  /_/\__/
+            /_/
+  
+
+Hello!
+
+- Open Source https://vercel.com/oss
+- Careers https://vercel.com/careers
+- Status https://www.vercel-status.com
+
+ font-family: "Geist Mono", monospace; white-space: pre; line-height: 1; @ https://vercel.com/_next/static/immutable/chunks/09bognj3n0dzk.js:78
+[    1865ms] [WARNING] [GSI_LOGGER]: Your client application uses one of the Google One Tap prompt UI status methods that may stop functioning when FedCM becomes mandatory. Refer to the migration guide to update your code accordingly and opt-in to FedCM to test your changes. Learn more: https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#display_moment and https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#skipped_moment @ https://accounts.google.com/gsi/client:86
+[    1960ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://vercel.com/api/jwt:0
+[    2827ms] [WARNING] Deprecated API for given entry type. @ https://vercel.com/_next/static/immutable/chunks/3vuaw0m6zroe4.js:18
+[    6029ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/1dmxf2gaqnhs0.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/login?next=%2Fsso-api%3Furl%3Dhttps%253A%252F%252Fsite-consecom.vercel.app%252F%26nonce%3D1a251379a0d9ba10ca1c395fc6ac8c0d848429f1cf651bb2d044c2e3c8ea2871:0
+[    6029ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/42nryff-e0b-n.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/login?next=%2Fsso-api%3Furl%3Dhttps%253A%252F%252Fsite-consecom.vercel.app%252F%26nonce%3D1a251379a0d9ba10ca1c395fc6ac8c0d848429f1cf651bb2d044c2e3c8ea2871:0
+[    6029ms] [WARNING] The resource https://vercel.com/_next/static/immutable/chunks/3flhcz7cw314y.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ https://vercel.com/login?next=%2Fsso-api%3Furl%3Dhttps%253A%252F%252Fsite-consecom.vercel.app%252F%26nonce%3D1a251379a0d9ba10ca1c395fc6ac8c0d848429f1cf651bb2d044c2e3c8ea2871:0
+[   38516ms] [ERROR] Access to fetch at 'https://pesmetal-api-4000.loca.lt/public/track' from origin 'https://site-consecom.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ https://site-consecom.vercel.app/:0
+[   38517ms] [ERROR] Failed to load resource: net::ERR_FAILED @ https://pesmetal-api-4000.loca.lt/public/track:0
+[   38571ms] [ERROR] Failed to load resource: the server responded with a status of 511 (Network Authentication Required) @ https://pesmetal-api-4000.loca.lt/public/services:0
+[   38751ms] [ERROR] Failed to load resource: the server responded with a status of 511 (Network Authentication Required) @ https://pesmetal-api-4000.loca.lt/public/company:0
+[   38785ms] [ERROR] Failed to load resource: the server responded with a status of 511 (Network Authentication Required) @ https://pesmetal-api-4000.loca.lt/public/projects:0

@@ -1,7 +1,5 @@
 {
-  "project": "pesmetal-site",
   "framework": "nextjs",
   "buildCommand": "npm run vercel-build",
-  "installCommand": "npm install",
-  "regions": ["gru1"]
+  "installCommand": "npm install"
 }
