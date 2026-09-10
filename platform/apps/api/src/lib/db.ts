@@ -105,6 +105,14 @@ export async function migrate(): Promise<void> {
     `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS quote_id text REFERENCES quotes(id) ON DELETE SET NULL`,
     `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS location text`,
     `ALTER TABLE appointments ADD COLUMN IF NOT EXISTS category text`,
+    // === NOVO MODELO DE AUTOMAÇÕES (multimídia + fluxos ramificados) ===
+    // Compatível com versões anteriores: graph (legado) e options (numérico simples)
+    // continuam funcionando. O engine detecta qual modelo usar pela presença de `steps`.
+    `ALTER TABLE automations ADD COLUMN IF NOT EXISTS steps text`,         // JSON array de etapas
+    `ALTER TABLE automations ADD COLUMN IF NOT EXISTS step_options text`, // JSON array de opções por etapa
+    // === Envio otimista: client_message_id para reconciliar mensagens ===
+    `ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS client_id text`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_whatsapp_messages_client_id ON whatsapp_messages(client_id) WHERE client_id IS NOT NULL`,
   ];
   for (const sql of alters) {
     try {

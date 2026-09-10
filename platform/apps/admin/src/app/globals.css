@@ -529,3 +529,114 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* === Steps Editor (automações multimídia + fluxos) === */
+.steps-editor { display: flex; flex-direction: column; gap: 12px; }
+.step-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-1);
+  overflow: hidden;
+}
+.step-card-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+}
+.step-card-title {
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 600; font-size: 13px;
+}
+.step-card-actions { display: flex; gap: 4px; }
+.step-card-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.step-row { display: flex; flex-direction: column; gap: 4px; }
+.step-options {
+  display: flex; flex-direction: column; gap: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.step-option {
+  display: flex; align-items: center; gap: 6px;
+}
+.add-step-area {
+  display: flex; justify-content: center;
+  padding: 12px 0;
+}
+.step-picker {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 16px;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  width: 100%;
+}
+.step-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 700px;
+}
+.step-picker-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 14px 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.15s;
+  color: var(--text);
+}
+.step-picker-btn:hover { border-color: var(--brand); background: var(--brand-soft); }
+
+/* === Mensagens otimistas (conversas) === */
+.msg-pending {
+  opacity: 0.7;
+}
+.msg-failed {
+  border: 1px solid var(--danger);
+  background: rgba(239, 68, 68, 0.08);
+}
+.msg-status {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+.msg-retry-btn {
+  background: var(--danger); color: #fff;
+  border: 0; border-radius: 4px;
+  padding: 1px 6px; font-size: 10px; cursor: pointer;
+  margin-left: 4px;
+}
+.msg-media-preview { max-width: 200px; max-height: 200px; border-radius: 6px; display: block; margin-top: 4px; }
+.msg-media-audio { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--text); }
+.msg-media-video { max-width: 250px; border-radius: 6px; display: block; margin-top: 4px; }
+.msg-media-doc {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; background: var(--bg-2);
+  border: 1px solid var(--border); border-radius: 6px;
+  margin-top: 4px; color: var(--text);
+  text-decoration: none; font-size: 12px;
+}
+.msg-media-doc:hover { background: var(--brand-soft); }
+
+/* === Composer de conversas com mídia === */
+.conv-composer { display: flex; gap: 6px; align-items: center; }
+.conv-composer-input { flex: 1; }
+.conv-composer-attach {
+  background: transparent; border: 0;
+  cursor: pointer; padding: 8px;
+  color: var(--text-dim); border-radius: 6px;
+}
+.conv-composer-attach:hover { background: var(--bg-2); color: var(--text); }
+.conv-composer-preview {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-2);
+  border-radius: 6px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.conv-composer-preview img { max-height: 32px; max-width: 32px; border-radius: 4px; }

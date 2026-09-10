@@ -192,25 +192,58 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
 
   if (msgsMatch && method === 'POST') {
     const body = await readBody(req);
-    if (!body.text) throw ApiError.validation('text obrigatório');
+    if (!body.text && !body.media_url) throw ApiError.validation('text ou media_url obrigatório');
     const conv = await ConversationRepository.findById(msgsMatch[1]);
     if (!conv) throw ApiError.notFound('Conversa');
     const contact = await ContactRepository.findById(conv.contact_id);
     if (!contact) throw ApiError.notFound('Contato');
     const number = formatNumber(contact.phone);
     const senderName = await getSenderNameForConversation(msgsMatch[1]);
-    const prefixedText = senderName ? `*${senderName}*\n${body.text}` : body.text;
+    const prefixedText = body.text && senderName ? `*${senderName}*\n${body.text}` : (body.text || '');
     const instanceName = (conv as any).instance_id
       ? (await q1(`SELECT instance_name FROM whatsapp_instances WHERE id = $1`, [(conv as any).instance_id]) as any)?.instance_name
       : undefined;
+
+    // Idempotência por client_id (envio otimista): se já existe mensagem com este client_id, retorna ela
+    if (body.client_id) {
+      const existing = await q1(`SELECT id, status FROM whatsapp_messages WHERE client_id = $1`, [body.client_id]);
+      if (existing) return json(res, 200, { id: existing.id, status: existing.status, deduplicated: true });
+    }
+
     try {
-      await Evolution.sendText({ number, text: prefixedText, instanceName });
-      const id = await MessageRepository.insert({
-        conversation_id: msgsMatch[1], direction: 'outgoing', type: 'text',
-        content: body.text, status: 'sent', sent_by_user_id: user.id,
-      });
+      let msgId: string;
+      const mediaType = body.media_type as ('image' | 'audio' | 'video' | 'document' | undefined) | undefined;
+      const isMedia = !!body.media_url && !!mediaType;
+      if (isMedia) {
+        msgId = await MessageRepository.insert({
+          conversation_id: msgsMatch[1], direction: 'outgoing', type: mediaType!,
+          content: body.text || '',
+          media_url: body.media_url,
+          media_mime: body.media_mime || null,
+          status: 'pending', sent_by_user_id: user.id,
+        });
+        await Evolution.sendMedia({
+          number, mediaType: mediaType!,
+          media: body.media_url,
+          fileName: body.file_name,
+          caption: body.text,
+          instanceName,
+        });
+        await MessageRepository.updateStatus(msgId, 'sent');
+      } else {
+        msgId = await MessageRepository.insert({
+          conversation_id: msgsMatch[1], direction: 'outgoing', type: 'text',
+          content: body.text, status: 'pending', sent_by_user_id: user.id,
+        });
+        await Evolution.sendText({ number, text: prefixedText, instanceName });
+        await MessageRepository.updateStatus(msgId, 'sent');
+      }
+      // Seta client_id para reconciliação otimista
+      if (body.client_id) {
+        await qe(`UPDATE whatsapp_messages SET client_id = $1 WHERE id = $2`, [body.client_id, msgId]);
+      }
       await ConversationRepository.update(msgsMatch[1], { last_message_at: new Date().toISOString(), status: 'human', automation_status: 'paused', human_started_at: new Date().toISOString(), human_started_by: user.id });
-      return json(res, 201, { id, status: 'sent' });
+      return json(res, 201, { id: msgId, status: 'sent', client_id: body.client_id || null });
     } catch (err: any) {
       return json(res, 502, { error: 'Falha ao enviar', code: 'integration_error', detail: String(err?.message || err) });
     }

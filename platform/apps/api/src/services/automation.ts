@@ -1,13 +1,14 @@
 /**
- * Automation Engine — FSM com dispatch table + modo numérico simples.
+ * Automation Engine — FSM com dispatch table + modo numérico simples + steps multimídia.
  *
- * Modo numérico (novo, prioritário):
- *   A automação tem as colunas `initial_message`, `options` (JSON array) e
- *   `invalid_message`. O usuário digita o número (1..N) ou o label da opção.
- *   Cada opção: { id, label, message, stage_id, transfer_human }.
+ * Modo numérico (prioritário simples):
+ *   Colunas `initial_message`, `options` (JSON array) e `invalid_message`.
+ *
+ * Modo steps multimídia (novo, multimídia + fluxos ramificados):
+ *   Colunas `steps` (JSON) e `step_options` (JSON). Suporta message/image/audio/video/document.
  *
  * Modo grafo (legado, compatível):
- *   FSM com nodes tipados. Estado persistido em whatsapp_conversations.
+ *   FSM com nodes tipados.
  */
 import { AutomationRepository } from '../repositories/automationRepo.js';
 import { ConversationRepository, MessageRepository } from '../repositories/conversationRepo.js';
@@ -18,6 +19,7 @@ import { LeadEventRepository } from '../repositories/miscRepos.js';
 import { Evolution } from './evolution.js';
 import { createNotification } from './notifications.js';
 import { logger } from '../lib/logger.js';
+import { hasStepModel, startStepAutomation, processIncomingStep } from './automationSteps.js';
 
 // === Tipos do modo grafo (legado) ===
 type NodeConfig = Record<string, any>;
@@ -429,6 +431,11 @@ export async function startAutomation(conversationId: string, automationId?: str
     return false;
   }
 
+  // Modelo steps multimídia (prioritário se existir)
+  if (hasStepModel(automation)) {
+    return startStepAutomation(conversationId, automation.id, instanceName);
+  }
+
   if (hasNumericMode(automation)) {
     await ConversationRepository.update(conversationId, {
       automation_id: automation.id,
@@ -477,6 +484,12 @@ export async function processIncomingMessage(conversationId: string, message: st
   const automation = conv.automation_id ? await AutomationRepository.findById(conv.automation_id) : null;
   if (!automation) {
     await startAutomation(conversationId, undefined, instanceName);
+    return;
+  }
+
+  // Modelo steps multimídia (prioritário se existir)
+  if (hasStepModel(automation)) {
+    await processIncomingStep(conversationId, message, instanceName);
     return;
   }
 

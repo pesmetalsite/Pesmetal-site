@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { api, getToken, getUser } from '@/lib/api'
-import { MessageSquarePlus, Pencil, RefreshCw, Search, Send, FileText } from 'lucide-react'
+import { MessageSquarePlus, Pencil, RefreshCw, Search, Send, FileText, Paperclip } from 'lucide-react'
 
 const PAGE = 50
 
@@ -74,7 +74,9 @@ export default function ConversasPage() {
   const [olderBase, setOlderBase] = useState(0)
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [reply, setReply] = useState('')
+  const [pendingAttachment, setPendingAttachment] = useState<any>(null)  // {url, mime, file_name, media_type}
   const [sending, setSending] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // --- utilidades ---------------------------------------------------------
   const [syncing, setSyncing] = useState(false)
@@ -321,27 +323,126 @@ export default function ConversasPage() {
 
   async function send() {
     const text = reply.trim()
-    if (!text || !active?.id || sending) return
+    const hasMedia = !!pendingAttachment
+    if ((!text && !hasMedia) || !active?.id || sending) return
     setSending(true)
+
+    // Gera client_id para reconciliação
+    const client_id = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
+    // === ENVIO OTIMISTA: cria mensagem local IMEDIATAMENTE ===
+    const optimisticMsg = {
+      id: client_id,
+      client_id,
+      conversation_id: active.id,
+      direction: 'outgoing',
+      type: hasMedia ? pendingAttachment.media_type : 'text',
+      content: text || '',
+      media_url: hasMedia ? pendingAttachment.url : null,
+      media_mime: hasMedia ? pendingAttachment.mime : null,
+      file_name: hasMedia ? pendingAttachment.file_name : null,
+      status: 'pending',
+      sent_by_user_id: getUser()?.id,
+      created_at: new Date().toISOString(),
+      _optimistic: true,
+    }
+    const wasPinned = isPinned()
+    commitMsgs([...msgsRef.current, optimisticMsg])
+    setReply('')
+    setPendingAttachment(null)
+    requestAnimationFrame(scrollBottom)
+
     try {
-      await api(`/whatsapp/conversations/${active.id}/messages`, { method: 'POST', body: JSON.stringify({ text }) }, getToken()!)
-      setReply('')
-      const r = await api(`/whatsapp/conversations/${active.id}/messages?limit=${PAGE}&offset=0&oldest_first=0`, {}, getToken()!)
-      const asc = (r.messages || []).slice().reverse()
-      const map = new Map(msgsRef.current.map((m: any) => [m.id, m]))
-      asc.forEach((m: any) => map.set(m.id, m))
-      commitMsgs(Array.from(map.values()).sort(byTime))
+      const body: any = { client_id }
+      if (text) body.text = text
+      if (hasMedia) {
+        body.media_url = pendingAttachment.url
+        body.media_mime = pendingAttachment.mime
+        body.media_type = pendingAttachment.media_type
+        body.file_name = pendingAttachment.file_name
+      }
+      const res: any = await api(`/whatsapp/conversations/${active.id}/messages`, { method: 'POST', body: JSON.stringify(body) }, getToken()!)
+
+      // === Reconciliação: substitui mensagem otimista pela real ===
+      const realId = res.id || res.client_id
+      const merged = msgsRef.current.map((m: any) =>
+        m.client_id === client_id ? { ...m, id: realId, status: 'sent', _optimistic: false } : m
+      )
+      // Se a resposta veio com deduplicated (já existia), apenas atualiza
+      if (res.deduplicated) {
+        commitMsgs(merged)
+      } else {
+        commitMsgs(merged)
+      }
+
       const now = new Date().toISOString()
       setConvs((prev: any[]) => {
         const others = prev.filter((c: any) => c.id !== active.id)
         return [{ ...active, last_message_at: now, unread_count: 0 }, ...others]
       })
       setActive((a: any) => a ? { ...a, last_message_at: now, unread_count: 0 } : a)
-      requestAnimationFrame(scrollBottom)
     } catch (e: any) {
-      alert(e.message || 'Falha ao enviar')
+      // Marca como failed (não some)
+      const merged = msgsRef.current.map((m: any) =>
+        m.client_id === client_id ? { ...m, status: 'failed', error: e.message } : m
+      )
+      commitMsgs(merged)
     } finally {
       setSending(false)
+      requestAnimationFrame(scrollBottom)
+    }
+  }
+
+  /** Reenvia mensagem que falhou. */
+  async function retryMessage(msg: any) {
+    if (!msg.client_id || !active?.id) return
+    // Marca como pending de novo
+    const merged = msgsRef.current.map((m: any) =>
+      m.client_id === msg.client_id ? { ...m, status: 'pending', error: undefined } : m
+    )
+    commitMsgs(merged)
+    try {
+      const body: any = { client_id: msg.client_id }
+      if (msg.content) body.text = msg.content
+      if (msg.media_url) {
+        body.media_url = msg.media_url
+        body.media_mime = msg.media_mime
+        body.media_type = msg.type
+        body.file_name = msg.file_name
+      }
+      const res: any = await api(`/whatsapp/conversations/${active.id}/messages`, { method: 'POST', body: JSON.stringify(body) }, getToken()!)
+      const realId = res.id || res.client_id
+      const merged2 = msgsRef.current.map((m: any) =>
+        m.client_id === msg.client_id ? { ...m, id: realId, status: 'sent', error: undefined } : m
+      )
+      commitMsgs(merged2)
+    } catch (e: any) {
+      const merged = msgsRef.current.map((m: any) =>
+        m.client_id === msg.client_id ? { ...m, status: 'failed', error: e.message } : m
+      )
+      commitMsgs(merged)
+    }
+  }
+
+  async function handleFileAttach(file: File) {
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res: any = await fetch('/upload/media', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: fd,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro no upload')
+      const mt = (data.mime || '').toLowerCase()
+      let media_type: 'image' | 'audio' | 'video' | 'document' = 'document'
+      if (mt.startsWith('image/')) media_type = 'image'
+      else if (mt.startsWith('audio/')) media_type = 'audio'
+      else if (mt.startsWith('video/')) media_type = 'video'
+      setPendingAttachment({ url: data.url, mime: data.mime, file_name: data.filename, media_type })
+    } catch (e: any) {
+      alert(e.message || 'Erro no upload')
     }
   }
 
@@ -556,12 +657,52 @@ export default function ConversasPage() {
                   ) : (
                     msgs.map((m: any) => {
                       const out = m.direction === 'outgoing'
+                      const isPending = m.status === 'pending'
+                      const isFailed = m.status === 'failed'
+                      const isMedia = !!m.media_url
+                      const mt = m.media_mime || ''
+                      const isImage = m.type === 'image' || mt.startsWith('image/')
+                      const isAudio = m.type === 'audio' || mt.startsWith('audio/')
+                      const isVideo = m.type === 'video' || mt.startsWith('video/')
+                      const isDoc = m.type === 'document'
                       return (
-                        <div key={m.id} className={`msg-row ${out ? 'out' : 'in'}`}>
-                          <div className={`msg-bubble ${out ? 'out' : 'in'}`}>
+                        <div key={m.id || m.client_id} className={`msg-row ${out ? 'out' : 'in'}`}>
+                          <div className={`msg-bubble ${out ? 'out' : 'in'} ${isPending ? 'msg-pending' : ''} ${isFailed ? 'msg-failed' : ''}`}>
                             <div className="msg-author">{msgAuthor(m)}</div>
-                            <div className="msg-content">{m.content || (m.media_url ? '📎 Anexo' : '')}</div>
-                            <div className="msg-meta">{hm(m.created_at)}</div>
+                            {isImage && m.media_url && (
+                              <img className="msg-media-preview" src={m.media_url} alt="" loading="lazy" />
+                            )}
+                            {isVideo && m.media_url && (
+                              <video className="msg-media-video" src={m.media_url} controls preload="metadata" />
+                            )}
+                            {isAudio && m.media_url && (
+                              <audio className="msg-media-audio" src={m.media_url} controls preload="metadata" />
+                            )}
+                            {isDoc && m.media_url && (
+                              <a className="msg-media-doc" href={m.media_url} target="_blank" rel="noreferrer">
+                                <FileText size={14} />
+                                {m.file_name || m.media_url.split('/').pop() || 'Documento'}
+                              </a>
+                            )}
+                            {!isMedia && m.content && (
+                              <div className="msg-content">{m.content}</div>
+                            )}
+                            {isMedia && m.content && (
+                              <div className="msg-content">{m.content}</div>
+                            )}
+                            <div className="msg-meta">
+                              {hm(m.created_at)}
+                              {out && isPending && <span className="msg-status">⏳</span>}
+                              {out && m.status === 'sent' && <span className="msg-status">✓</span>}
+                              {out && m.status === 'delivered' && <span className="msg-status">✓✓</span>}
+                              {out && isFailed && (
+                                <button
+                                  className="msg-retry-btn"
+                                  onClick={() => retryMessage(m)}
+                                  type="button"
+                                >Tentar novamente</button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )
@@ -572,14 +713,56 @@ export default function ConversasPage() {
 
               <div className="conv-composer">
                 <input
-                  className="input"
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-                  placeholder="Digite uma mensagem..."
-                  disabled={sending}
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,audio/*,video/*,.pdf,.doc,.docx"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) handleFileAttach(f)
+                    if (fileInputRef.current) fileInputRef.current.value = ''
+                  }}
                 />
-                <button className="btn btn-primary" onClick={send} disabled={sending || !reply.trim()}>
+                <button
+                  type="button"
+                  className="conv-composer-attach"
+                  title="Anexar mídia"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={sending}
+                >
+                  <Paperclip size={16} />
+                </button>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {pendingAttachment && (
+                    <div className="conv-composer-preview">
+                      {pendingAttachment.media_type === 'image' ? (
+                        <img src={pendingAttachment.url} alt="" />
+                      ) : (
+                        <Paperclip size={14} />
+                      )}
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {pendingAttachment.file_name || 'Anexo'}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        onClick={() => setPendingAttachment(null)}
+                        style={{ background: 'transparent', border: 0, color: 'var(--text-dim)', cursor: 'pointer' }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                  <input
+                    className="input"
+                    value={reply}
+                    onChange={(e) => setReply(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+                    placeholder={pendingAttachment ? 'Legenda (opcional)...' : 'Digite uma mensagem...'}
+                    disabled={sending}
+                  />
+                </div>
+                <button className="btn btn-primary" onClick={send} disabled={sending || (!reply.trim() && !pendingAttachment)}>
                   <Send size={15} />
                 </button>
               </div>

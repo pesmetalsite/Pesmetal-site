@@ -177,10 +177,19 @@ function readRawBody(req: any, maxBytes: number): Promise<Buffer> {
   });
 }
 
+/** Mime types permitidos para mídia em geral (não apenas PDF/documento). */
+const ALLOWED_MEDIA_MIMES = new Set([
+  'image/png', 'image/jpeg', 'image/gif', 'image/webp',
+  'audio/ogg', 'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav', 'audio/webm',
+  'video/mp4', 'video/webm', 'video/quicktime',
+  'application/pdf',
+  'application/octet-stream', // alguns browsers mandam esse para áudio/vídeo
+]);
+
 export async function uploadRouter(req: any, res: any, url: URL) {
   const path_ = url.pathname;
 
-  // POST /upload/file
+  // POST /upload/file — upload de mídia para lead (lead_id obrigatório)
   if (path_ === '/upload/file' && req.method === 'POST') {
     try {
       const user = await authenticate(req);
@@ -192,7 +201,6 @@ export async function uploadRouter(req: any, res: any, url: URL) {
       }
       const boundaryMatch = ctype.match(/boundary=(.+)$/);
       if (!boundaryMatch) return json(res, 400, { error: 'boundary ausente' });
-      // A boundary pode vir com aspas envolvendo o token — strip se vier entre aspas.
       const boundaryRaw = boundaryMatch[1].replace(/^"|"$/g, '').trim();
       const boundary = `--${boundaryRaw}`;
 
@@ -209,7 +217,6 @@ export async function uploadRouter(req: any, res: any, url: URL) {
         return json(res, 400, { error: 'lead_id obrigatório' });
       }
 
-      // Verifica se o lead existe — evita FK error genérico e devolve 404 claro.
       const lead = await q1(`SELECT id FROM leads WHERE id = $1`, [leadId]);
       if (!lead) {
         return json(res, 404, { error: 'lead_id não encontrado' });
@@ -217,34 +224,27 @@ export async function uploadRouter(req: any, res: any, url: URL) {
 
       const originalName = filePart.filename || 'file';
       const safeName = sanitizeFilename(originalName);
-      // Prefixo timestamp + id único para evitar colisões.
       const storedName = `${Date.now()}_${nanoid(8)}_${safeName}`;
       const fullPath = path.join(UPLOAD_DIR, storedName);
       fs.writeFileSync(fullPath, filePart.data);
 
-      // Sanidade: o arquivo escrito deve estar dentro de UPLOAD_DIR (defesa contra path traversal).
       const resolved = path.resolve(fullPath);
       if (!resolved.startsWith(UPLOAD_DIR + path.sep) && resolved !== UPLOAD_DIR) {
         fs.unlinkSync(fullPath);
         return json(res, 400, { error: 'filename inválido' });
       }
 
-      // Valida magic number vs. Content-Type declarado.
       const detectedMime = detectMime(filePart.data, filePart.mime);
+      if (detectedMime && !ALLOWED_MEDIA_MIMES.has(detectedMime)) {
+        fs.unlinkSync(fullPath);
+        return json(res, 400, { error: `Tipo de arquivo não permitido: ${detectedMime}` });
+      }
 
       const id = nanoid();
       await qe(
         `INSERT INTO lead_files (id, lead_id, filename, mime, size, path, uploaded_by)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          id,
-          leadId,
-          originalName,
-          detectedMime,
-          filePart.data.length,
-          resolved,
-          user.id
-        ]
+        [id, leadId, originalName, detectedMime, filePart.data.length, resolved, user.id]
       );
 
       try {
@@ -254,11 +254,9 @@ export async function uploadRouter(req: any, res: any, url: URL) {
           [nanoid(), leadId, user.id, `Arquivo recebido: ${originalName}`]
         );
       } catch (evtErr) {
-        // Loga mas não falha o upload — o arquivo já foi persistido.
         console.error('[upload] falha ao registrar evento:', evtErr);
       }
 
-      // URL pública — assume servidor rodando atrás de host; cliente pode reconstruir.
       const urlPath = `/uploads/${storedName}`;
       return json(res, 200, {
         id,
@@ -274,6 +272,90 @@ export async function uploadRouter(req: any, res: any, url: URL) {
       console.error('[upload] erro:', err);
       return json(res, status, { error: message });
     }
+  }
+
+  // POST /upload/media — upload genérico de mídia (sem lead_id) para automações/composer
+  if (path_ === '/upload/media' && req.method === 'POST') {
+    try {
+      const user = await authenticate(req);
+      if (!user) return json(res, 401, { error: 'Não autenticado' });
+
+      const ctype = req.headers['content-type'] || '';
+      if (!ctype.startsWith('multipart/form-data')) {
+        return json(res, 400, { error: 'multipart/form-data esperado' });
+      }
+      const boundaryMatch = ctype.match(/boundary=(.+)$/);
+      if (!boundaryMatch) return json(res, 400, { error: 'boundary ausente' });
+      const boundaryRaw = boundaryMatch[1].replace(/^"|"$/g, '').trim();
+      const boundary = `--${boundaryRaw}`;
+
+      const raw = await readRawBody(req, MAX_BYTES);
+      const parts = parseMultipart(raw, boundary);
+      const filePart = parts.find(p => p.name === 'file');
+      if (!filePart || !filePart.data || filePart.data.length === 0) {
+        return json(res, 400, { error: 'Arquivo ausente' });
+      }
+
+      const originalName = filePart.filename || 'file';
+      const safeName = sanitizeFilename(originalName);
+      const storedName = `${Date.now()}_${nanoid(8)}_${safeName}`;
+      const fullPath = path.join(UPLOAD_DIR, storedName);
+      fs.writeFileSync(fullPath, filePart.data);
+
+      const resolved = path.resolve(fullPath);
+      if (!resolved.startsWith(UPLOAD_DIR + path.sep) && resolved !== UPLOAD_DIR) {
+        fs.unlinkSync(fullPath);
+        return json(res, 400, { error: 'filename inválido' });
+      }
+
+      const detectedMime = detectMime(filePart.data, filePart.mime);
+      if (!detectedMime) {
+        fs.unlinkSync(fullPath);
+        return json(res, 400, { error: 'Tipo de arquivo não detectado' });
+      }
+      if (!ALLOWED_MEDIA_MIMES.has(detectedMime)) {
+        fs.unlinkSync(fullPath);
+        return json(res, 400, { error: `Tipo de arquivo não permitido: ${detectedMime}` });
+      }
+
+      const urlPath = `/uploads/${storedName}`;
+      return json(res, 200, {
+        filename: originalName,
+        mime: detectedMime,
+        size: filePart.data.length,
+        url: urlPath,
+        path: urlPath,
+      });
+    } catch (err: any) {
+      const status = err?.statusCode && typeof err.statusCode === 'number' ? err.statusCode : 500;
+      const message = err?.message || 'Erro interno no upload';
+      console.error('[upload/media] erro:', err);
+      return json(res, status, { error: message });
+    }
+  }
+
+  // GET /uploads/:filename — serve arquivos estáticos
+  const serveMatch = path_.match(/^\/uploads\/([a-zA-Z0-9_\-.%]+)$/);
+  if (serveMatch && req.method === 'GET') {
+    const filename = decodeURIComponent(serveMatch[1]);
+    // Whitelist rigorosa — só permite filename sanitizado
+    if (!/^[0-9_]+[a-zA-Z0-9_\-.]+$/.test(filename)) {
+      return json(res, 400, { error: 'filename inválido' });
+    }
+    const fullPath = path.resolve(path.join(UPLOAD_DIR, filename));
+    if (!fullPath.startsWith(UPLOAD_DIR + path.sep)) {
+      return json(res, 403, { error: 'acesso negado' });
+    }
+    if (!fs.existsSync(fullPath)) {
+      return json(res, 404, { error: 'arquivo não encontrado' });
+    }
+    const data = fs.readFileSync(fullPath);
+    // Detecta MIME
+    const detected = detectMime(data);
+    res.setHeader('Content-Type', detected || 'application/octet-stream');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.writeHead(200);
+    return res.end(data);
   }
 
   json(res, 404, { error: 'Rota não encontrada' });

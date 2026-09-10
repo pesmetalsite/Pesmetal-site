@@ -40,10 +40,15 @@ export const automationsRouter = asyncHandler(async (req, res, url) => {
 
   if (path === '/automations' && method === 'GET') {
     const list = await AutomationRepository.list();
-    return json(res, 200, { automations: list.map(a => ({
-      id: a.id, name: a.name, description: a.description, trigger: a.trigger,
-      status: a.status, updated_at: a.updated_at,
-    })) });
+    return json(res, 200, { automations: list.map(a => {
+      let hasSteps = false;
+      try { if (a.steps) { const s = JSON.parse(a.steps); hasSteps = Array.isArray(s) && s.length > 0; } } catch {}
+      return {
+        id: a.id, name: a.name, description: a.description, trigger: a.trigger,
+        status: a.status, updated_at: a.updated_at,
+        has_steps: hasSteps,
+      };
+    }) });
   }
 
   if (path === '/automations' && method === 'POST') {
@@ -55,6 +60,12 @@ export const automationsRouter = asyncHandler(async (req, res, url) => {
     if (body.options !== undefined) {
       fields.options = typeof body.options === 'string' ? body.options : JSON.stringify(body.options);
     }
+    if (body.steps !== undefined) {
+      fields.steps = typeof body.steps === 'string' ? body.steps : JSON.stringify(body.steps);
+    }
+    if (body.step_options !== undefined) {
+      fields.step_options = typeof body.step_options === 'string' ? body.step_options : JSON.stringify(body.step_options);
+    }
     if (body.instance_ids !== undefined) fields.instance_ids = typeof body.instance_ids === 'string' ? body.instance_ids : JSON.stringify(body.instance_ids ?? []);
     const id = await AutomationRepository.insert(fields);
     return json(res, 201, { id });
@@ -65,8 +76,7 @@ export const automationsRouter = asyncHandler(async (req, res, url) => {
     const a = await AutomationRepository.findById(idMatch[1]);
     if (!a) throw ApiError.notFound('Automação');
     return json(res, 200, { automation: a });
-  }
-  if (idMatch && method === 'PUT') {
+  }  if (idMatch && method === 'PUT') {
     if (user.role === 'atendente') throw ApiError.forbidden();
     let body: any;
     try {
@@ -84,6 +94,17 @@ export const automationsRouter = asyncHandler(async (req, res, url) => {
       fields.options = typeof body.options === 'string' ? body.options : JSON.stringify(body.options ?? []);
     } else if (Object.prototype.hasOwnProperty.call(body, 'options')) {
       fields.options = '[]';
+    }
+    // Steps multimídia + opções por step (novo modelo)
+    if (body.steps !== undefined) {
+      fields.steps = typeof body.steps === 'string' ? body.steps : JSON.stringify(body.steps ?? []);
+    } else if (Object.prototype.hasOwnProperty.call(body, 'steps')) {
+      fields.steps = '[]';
+    }
+    if (body.step_options !== undefined) {
+      fields.step_options = typeof body.step_options === 'string' ? body.step_options : JSON.stringify(body.step_options ?? []);
+    } else if (Object.prototype.hasOwnProperty.call(body, 'step_options')) {
+      fields.step_options = '[]';
     }
     if (body.instance_ids !== undefined) fields.instance_ids = typeof body.instance_ids === 'string' ? body.instance_ids : JSON.stringify(body.instance_ids ?? []);
     await AutomationRepository.update(idMatch[1], fields);

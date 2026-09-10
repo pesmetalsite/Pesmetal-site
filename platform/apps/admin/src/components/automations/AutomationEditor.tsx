@@ -7,6 +7,7 @@ import { api, getToken } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { createBlankOption, parseOptions, serializeOptions } from './options'
 import type { AutomationOption, AutomationSummary, Stage, WhatsAppInstance } from './types'
+import { StepsEditor, type AutomationStep, type StepOption } from './StepsEditor'
 
 interface AutomationEditorProps {
   automation: AutomationSummary | null
@@ -25,6 +26,9 @@ export function AutomationEditor({ automation, stages, onClose, onSaved }: Autom
   const [instances, setInstances] = useState<WhatsAppInstance[]>([])
   const [instanceIds, setInstanceIds] = useState<string[]>([])
   const [options, setOptions] = useState<AutomationOption[]>(() => [createBlankOption('opt-1')])
+  const [steps, setSteps] = useState<AutomationStep[]>([])
+  const [stepOptions, setStepOptions] = useState<StepOption[]>([])
+  const [mode, setMode] = useState<'classic' | 'steps'>('classic')
   const [loading, setLoading] = useState(!!automation)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +54,20 @@ export function AutomationEditor({ automation, stages, onClose, onSaved }: Autom
         try { setInstanceIds(JSON.parse(d.instance_ids || '[]')) } catch { setInstanceIds([]) }
         const parsed = parseOptions(d.options)
         setOptions(parsed.length ? parsed : [createBlankOption('opt-1')])
+
+        // Carrega steps se houver
+        try {
+          const parsedSteps: AutomationStep[] = JSON.parse(d.steps || '[]')
+          const parsedStepOpts: StepOption[] = JSON.parse(d.step_options || '[]')
+          if (parsedSteps.length > 0) {
+            setSteps(parsedSteps)
+            setStepOptions(parsedStepOpts)
+            setMode('steps')
+          } else {
+            setSteps([])
+            setStepOptions([])
+          }
+        } catch { setSteps([]); setStepOptions([]) }
       })
       .catch(() => setError('Não foi possível carregar a automação.'))
       .finally(() => setLoading(false))
@@ -109,6 +127,13 @@ export function AutomationEditor({ automation, stages, onClose, onSaved }: Autom
     invalid_message: invalidMessage,
     closing_message: closingMessage,
     instance_ids: instanceIds,
+    // Steps multimídia + opções (sempre enviados; backend decide se usa)
+    steps: steps.map(s => ({
+      ...s,
+      // Remove campos UI-only
+      delay_unit: undefined,
+    })),
+    step_options: stepOptions,
   })
 
   const save = async (asCopy: boolean) => {
@@ -168,44 +193,84 @@ export function AutomationEditor({ automation, stages, onClose, onSaved }: Autom
               rows={4}
             />
 
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-text-dim">Opções</span>
-                <Button type="button" variant="outline" size="sm" onClick={addOption}>
-                  <Plus size={13} /> Adicionar opção
-                </Button>
-              </div>
-              {options.length === 0 ? (
-                <p className="text-sm text-text-muted">Nenhuma opção. Clique em &quot;Adicionar opção&quot; para criar a primeira.</p>
-              ) : (
-                <div className="grid gap-3">
-                  {options.map((o, i) => (
-                    <OptionRow
-                      key={o.id}
-                      index={i}
-                      option={o}
-                      stages={stages}
-                      canMoveUp={i > 0}
-                      canMoveDown={i < options.length - 1}
-                      nameRef={setNameRef(o.id)}
-                      onNameEnter={() => handleNameEnter(o.id)}
-                      onChange={(patch) => patchOption(o.id, patch)}
-                      onMoveUp={() => moveOption(o.id, -1)}
-                      onMoveDown={() => moveOption(o.id, 1)}
-                      onRemove={() => removeOption(o.id)}
-                    />
-                  ))}
-                </div>
-              )}
+            <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--border)', marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => setMode('classic')}
+                style={{
+                  padding: '8px 16px', background: 'transparent',
+                  border: 0, borderBottom: mode === 'classic' ? '2px solid var(--brand)' : '2px solid transparent',
+                  color: mode === 'classic' ? 'var(--brand)' : 'var(--text-dim)',
+                  fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                }}
+              >
+                Modo Clássico (opções simples)
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('steps')}
+                style={{
+                  padding: '8px 16px', background: 'transparent',
+                  border: 0, borderBottom: mode === 'steps' ? '2px solid var(--brand)' : '2px solid transparent',
+                  color: mode === 'steps' ? 'var(--brand)' : 'var(--text-dim)',
+                  fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                }}
+              >
+                Modo Steps (multimídia + fluxos)
+              </button>
             </div>
 
-            <Textarea
-              label="Mensagem para resposta inválida (opcional)"
-              value={invalidMessage}
-              onChange={(e) => setInvalidMessage(e.target.value)}
-              placeholder="Quando o contato enviar algo que não é uma das opções…"
-              rows={2}
-            />
+            {mode === 'classic' && (
+              <>
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-text-dim">Opções</span>
+                    <Button type="button" variant="outline" size="sm" onClick={addOption}>
+                      <Plus size={13} /> Adicionar opção
+                    </Button>
+                  </div>
+                  {options.length === 0 ? (
+                    <p className="text-sm text-text-muted">Nenhuma opção. Clique em &quot;Adicionar opção&quot; para criar a primeira.</p>
+                  ) : (
+                    <div className="grid gap-3">
+                      {options.map((o, i) => (
+                        <OptionRow
+                          key={o.id}
+                          index={i}
+                          option={o}
+                          stages={stages}
+                          canMoveUp={i > 0}
+                          canMoveDown={i < options.length - 1}
+                          nameRef={setNameRef(o.id)}
+                          onNameEnter={() => handleNameEnter(o.id)}
+                          onChange={(patch) => patchOption(o.id, patch)}
+                          onMoveUp={() => moveOption(o.id, -1)}
+                          onMoveDown={() => moveOption(o.id, 1)}
+                          onRemove={() => removeOption(o.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Textarea
+                  label="Mensagem para resposta inválida (opcional)"
+                  value={invalidMessage}
+                  onChange={(e) => setInvalidMessage(e.target.value)}
+                  placeholder="Quando o contato enviar algo que não é uma das opções…"
+                  rows={2}
+                />
+              </>
+            )}
+
+            {mode === 'steps' && (
+              <StepsEditor
+                steps={steps}
+                stepOptions={stepOptions}
+                stages={stages}
+                onChange={(s, so) => { setSteps(s); setStepOptions(so) }}
+              />
+            )}
 
             <div className="rounded-lg border border-border bg-bg-2/40 p-4">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-text-dim mb-2">WhatsApps desta automação</div>

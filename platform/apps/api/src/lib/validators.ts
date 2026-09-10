@@ -187,6 +187,9 @@ export const CreateAutomationSchema = z.object({
   invalid_message: z.string().optional(),
   instance_ids: z.any().optional(),
   closing_message: z.string().optional(),
+  // Steps multimídia + opções (modelo novo)
+  steps: z.array(z.record(z.any())).optional(),
+  step_options: z.array(z.record(z.any())).optional(),
 });
 
 // === Public (site) ===
