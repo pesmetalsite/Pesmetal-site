@@ -296,12 +296,18 @@ export async function uploadRouter(req: any, res: any, url: URL) {
       const boundaryMatch = ctype.match(/boundary=(.+)$/);
       if (!boundaryMatch) return json(res, 400, { error: 'boundary ausente' });
       const boundaryRaw = boundaryMatch[1].replace(/^"|"$/g, '').trim();
-      // O Content-Type vem SEM o prefixo `--`, mas o body SEMPRE usa `--<boundary>`.
-      // Strip qualquer prefixo `--` que o cliente tenha enviado (ex.: curl às vezes inclui).
-      const cleanedBoundary = boundaryRaw.replace(/^-+/, '');
-      const boundary = `--${cleanedBoundary}`;
+      // RFC 2046: o boundary no body é sempre precedido por `--`.
+      // O Content-Type pode vir com ou sem esse prefixo dependendo do cliente.
+      // Strip qualquer quantidade de hífens iniciais e re-adiciona exatamente 2.
+      const cleaned = boundaryRaw.replace(/^-+/, '');
+      const boundary = `--${cleaned}`;
 
       const raw = await readRawBody(req, MAX_BYTES);
+      console.log('[upload] content-type:', ctype.slice(0, 200));
+      console.log('[upload] boundaryRaw:', boundaryRaw);
+      console.log('[upload] boundary:', boundary);
+      console.log('[upload] raw bytes:', raw.length);
+      console.log('[upload] first 100:', raw.slice(0, 100).toString('utf8').replace(/\n/g, '\\n'));
       const parts = parseMultipart(raw, boundary);
       const filePart = parts.find(p => p.name === 'file');
       if (!filePart || !filePart.data || filePart.data.length === 0) {
