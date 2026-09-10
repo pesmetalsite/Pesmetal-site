@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
-import { api, getToken, getUser } from '@/lib/api'
+import { api, getToken, getUser, API_URL } from '@/lib/api'
 import { MessageSquarePlus, Pencil, RefreshCw, Search, Send, FileText, Paperclip } from 'lucide-react'
 
 const PAGE = 50
@@ -40,6 +40,15 @@ function msgAuthor(m: any) {
   if (m.direction !== 'outgoing') return 'Cliente'
   if (m.sent_by_user_id) return 'Você'
   return '🤖 Automação'
+}
+
+/** Converte path relativo de mídia em URL absoluta (mídia fica no backend). */
+function mediaUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  if (/^https?:\/\//i.test(url)) return url
+  if (url.startsWith('/uploads/')) return `${API_URL}${url}`
+  return url
+}
 }
 
 function resolveActive(prev: any, list: any[], openIdRef: { current: string | null }): any {
@@ -428,7 +437,7 @@ export default function ConversasPage() {
     try {
       const fd = new FormData()
       fd.append('file', file)
-      const res: any = await fetch('/upload/media', {
+      const res: any = await fetch(`${API_URL}/upload/media`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${getToken()}` },
         body: fd,
@@ -670,16 +679,16 @@ export default function ConversasPage() {
                           <div className={`msg-bubble ${out ? 'out' : 'in'} ${isPending ? 'msg-pending' : ''} ${isFailed ? 'msg-failed' : ''}`}>
                             <div className="msg-author">{msgAuthor(m)}</div>
                             {isImage && m.media_url && (
-                              <img className="msg-media-preview" src={m.media_url} alt="" loading="lazy" />
+                              <img className="msg-media-preview" src={mediaUrl(m.media_url) || ''} alt="" loading="lazy" />
                             )}
                             {isVideo && m.media_url && (
-                              <video className="msg-media-video" src={m.media_url} controls preload="metadata" />
+                              <video className="msg-media-video" src={mediaUrl(m.media_url) || ''} controls preload="metadata" />
                             )}
                             {isAudio && m.media_url && (
-                              <audio className="msg-media-audio" src={m.media_url} controls preload="metadata" />
+                              <audio className="msg-media-audio" src={mediaUrl(m.media_url) || ''} controls preload="metadata" />
                             )}
                             {isDoc && m.media_url && (
-                              <a className="msg-media-doc" href={m.media_url} target="_blank" rel="noreferrer">
+                              <a className="msg-media-doc" href={mediaUrl(m.media_url) || ''} target="_blank" rel="noreferrer">
                                 <FileText size={14} />
                                 {m.file_name || m.media_url.split('/').pop() || 'Documento'}
                               </a>
@@ -736,7 +745,7 @@ export default function ConversasPage() {
                   {pendingAttachment && (
                     <div className="conv-composer-preview">
                       {pendingAttachment.media_type === 'image' ? (
-                        <img src={pendingAttachment.url} alt="" />
+                        <img src={mediaUrl(pendingAttachment.url) || ''} alt="" />
                       ) : (
                         <Paperclip size={14} />
                       )}

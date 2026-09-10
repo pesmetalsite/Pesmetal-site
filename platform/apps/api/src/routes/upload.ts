@@ -14,6 +14,14 @@ import fs from 'node:fs';
 const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), 'data', 'uploads'));
 const MAX_BYTES = parseInt(process.env.UPLOAD_MAX_MB || '15') * 1024 * 1024;
 
+/** Retorna URL absoluta do arquivo, baseada no host da request. */
+function buildPublicUrl(req: any, urlPath: string): string {
+  const host = req.headers['x-forwarded-host'] || req.headers.host || '';
+  const proto = (req.headers['x-forwarded-proto'] as string) || 'https';
+  if (!host) return urlPath;
+  return `${proto}://${host}${urlPath}`;
+}
+
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // Magic numbers (primeiros bytes) por tipo comum. Validação básica de integridade.
@@ -258,12 +266,13 @@ export async function uploadRouter(req: any, res: any, url: URL) {
       }
 
       const urlPath = `/uploads/${storedName}`;
+      const publicUrl = buildPublicUrl(req, urlPath);
       return json(res, 200, {
         id,
         filename: originalName,
         mime: detectedMime,
         size: filePart.data.length,
-        url: urlPath,
+        url: publicUrl,
         path: urlPath,
       });
     } catch (err: any) {
@@ -319,11 +328,12 @@ export async function uploadRouter(req: any, res: any, url: URL) {
       }
 
       const urlPath = `/uploads/${storedName}`;
+      const publicUrl = buildPublicUrl(req, urlPath);
       return json(res, 200, {
         filename: originalName,
         mime: detectedMime,
         size: filePart.data.length,
-        url: urlPath,
+        url: publicUrl,
         path: urlPath,
       });
     } catch (err: any) {

@@ -108,6 +108,14 @@ async function sendStepContent(
   if (!contact) return { ok: false, error: 'no contact' };
   const number = formatNumber(contact.phone);
 
+  /** Converte path relativo de upload (/uploads/...) em URL absoluta. */
+  function absolutize(url: string | undefined): string | undefined {
+    if (!url) return undefined;
+    if (/^https?:\/\//i.test(url)) return url;
+    if (url.startsWith('/uploads/')) return process.env.PUBLIC_API_URL ? `${process.env.PUBLIC_API_URL}${url}` : url;
+    return url;
+  }
+
   switch (step.type) {
     case 'message': {
       const text = step.content || '';
@@ -130,7 +138,7 @@ async function sendStepContent(
     case 'image':
     case 'video':
     case 'document': {
-      const mediaUrl = step.media_url;
+      const mediaUrl = absolutize(step.media_url);
       if (!mediaUrl) return { ok: false, error: 'no media_url' };
       const mediaType: 'image' | 'video' | 'document' = step.type === 'image' ? 'image' : step.type === 'video' ? 'video' : 'document';
       const msgId = await MessageRepository.insert({
@@ -138,7 +146,7 @@ async function sendStepContent(
         direction: 'outgoing',
         type: mediaType,
         content: step.caption || '',
-        media_url: mediaUrl,
+        media_url: step.media_url,
         media_mime: step.media_mime || null,
         status: 'pending',
       });
@@ -159,14 +167,14 @@ async function sendStepContent(
       }
     }
     case 'audio': {
-      const mediaUrl = step.media_url;
+      const mediaUrl = absolutize(step.media_url);
       if (!mediaUrl) return { ok: false, error: 'no media_url' };
       const msgId = await MessageRepository.insert({
         conversation_id: conv.id,
         direction: 'outgoing',
         type: 'audio',
         content: '',
-        media_url: mediaUrl,
+        media_url: step.media_url,
         media_mime: step.media_mime || 'audio/ogg',
         status: 'pending',
       });

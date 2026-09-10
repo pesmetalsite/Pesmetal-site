@@ -11,7 +11,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp, Copy, Image as ImageIcon, Music, Video, FileText, MessageSquare, Type, Plus, Save, Trash2, Upload, CornerDownLeft, X } from 'lucide-react'
 import { Button, Input, Loading, Modal, Textarea } from '@/components/ui'
-import { api, getToken } from '@/lib/api'
+import { API_URL, api, getToken } from '@/lib/api'
 
 export type StepType = 'message' | 'image' | 'audio' | 'video' | 'document' | 'menu' | 'end'
 
@@ -144,7 +144,7 @@ export function StepsEditor({ steps, stepOptions, stages, onChange }: StepsEdito
     try {
       const fd = new FormData()
       fd.append('file', file)
-      const res = await fetch('/upload/media', {
+      const res = await fetch(`${API_URL}/upload/media`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${getToken()}` },
         body: fd,
@@ -280,7 +280,7 @@ export function StepsEditor({ steps, stepOptions, stages, onChange }: StepsEdito
                       {step.media_url ? (
                         <>
                           {step.type === 'image' && (
-                            <img src={step.media_url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }} />
+                            <img src={step.media_url.startsWith('/') ? `${API_URL}${step.media_url}` : step.media_url} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }} />
                           )}
                           <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{step.file_name || step.media_url.split('/').pop()}</span>
                           <button type="button" className="btn btn-ghost btn-sm" onClick={() => {

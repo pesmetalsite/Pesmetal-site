@@ -203,6 +203,8 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
     const instanceName = (conv as any).instance_id
       ? (await q1(`SELECT instance_name FROM whatsapp_instances WHERE id = $1`, [(conv as any).instance_id]) as any)?.instance_name
       : undefined;
+    const proto = (req.headers['x-forwarded-proto'] as string) || 'https';
+    const host = (req.headers['x-forwarded-host'] as string) || req.headers.host || 'localhost';
 
     // Idempotência por client_id (envio otimista): se já existe mensagem com este client_id, retorna ela
     if (body.client_id) {
@@ -215,16 +217,20 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
       const mediaType = body.media_type as ('image' | 'audio' | 'video' | 'document' | undefined) | undefined;
       const isMedia = !!body.media_url && !!mediaType;
       if (isMedia) {
+        // Evolution precisa de URL absoluta para fetch. Converte se vier relativa.
+        const absoluteMedia = /^https?:\/\//i.test(body.media_url)
+          ? body.media_url
+          : `${proto}://${host}${body.media_url.startsWith('/') ? body.media_url : '/' + body.media_url}`;
         msgId = await MessageRepository.insert({
           conversation_id: msgsMatch[1], direction: 'outgoing', type: mediaType!,
           content: body.text || '',
-          media_url: body.media_url,
+          media_url: body.media_url, // mantém original (pode ser relativo)
           media_mime: body.media_mime || null,
           status: 'pending', sent_by_user_id: user.id,
         });
         await Evolution.sendMedia({
           number, mediaType: mediaType!,
-          media: body.media_url,
+          media: absoluteMedia,
           fileName: body.file_name,
           caption: body.text,
           instanceName,
