@@ -296,8 +296,10 @@ export async function uploadRouter(req: any, res: any, url: URL) {
       const boundaryMatch = ctype.match(/boundary=(.+)$/);
       if (!boundaryMatch) return json(res, 400, { error: 'boundary ausente' });
       const boundaryRaw = boundaryMatch[1].replace(/^"|"$/g, '').trim();
-      // curl/clientes geralmente já enviam boundary com prefixo `--`. Alguns não.
-      const boundary = boundaryRaw.startsWith('--') ? boundaryRaw : `--${boundaryRaw}`;
+      // O Content-Type vem SEM o prefixo `--`, mas o body SEMPRE usa `--<boundary>`.
+      // Strip qualquer prefixo `--` que o cliente tenha enviado (ex.: curl às vezes inclui).
+      const cleanedBoundary = boundaryRaw.replace(/^-+/, '');
+      const boundary = `--${cleanedBoundary}`;
 
       const raw = await readRawBody(req, MAX_BYTES);
       const parts = parseMultipart(raw, boundary);
