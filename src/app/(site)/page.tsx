@@ -6,7 +6,7 @@ import {
   CheckCircle2, Phone, ChevronRight, Star
 } from 'lucide-react'
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://lucid-contentment-production-17bc.up.railway.app'
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://pesmetal-api-production.up.railway.app'
 const DEFAULT_WA = '5515998345539'
 
 const SERVICES = [

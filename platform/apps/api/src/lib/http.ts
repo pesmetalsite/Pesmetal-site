@@ -6,9 +6,12 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 const ALLOWED_ORIGINS = new Set([
   'https://pesmetal.com.br',
   'https://www.pesmetal.com.br',
-  'https://pesmetal-server.up.railway.app',
-  'https://lucid-contentment-production-17bc.up.railway.app',
+  'https://admin-pesmetal.com.br',
+  // Deploys Vercel do site e do admin (origens reais de browser).
+  'https://site-8cjnm4f2g-consecom.vercel.app',
+  'https://admin-c1yo6epcl-consecom.vercel.app',
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://localhost:4000',
 ]);
 

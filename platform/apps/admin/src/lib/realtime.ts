@@ -20,7 +20,7 @@ let isVisible = true
 function getAPI() {
   return (typeof window !== 'undefined' && (window as any).__NEXT_PUBLIC_API_URL)
     || process.env.NEXT_PUBLIC_API_URL
-    || 'https://lucid-contentment-production-17bc.up.railway.app'
+    || 'https://pesmetal-api-production.up.railway.app'
 }
 
 async function poll() {

@@ -1,4 +1,4 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://lucid-contentment-production-17bc.up.railway.app';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://pesmetal-api-production.up.railway.app';
 
 interface CacheEntry { data: any; ts: number }
 const cache = new Map<string, CacheEntry>();

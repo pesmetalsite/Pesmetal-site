@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'https://evolution-api-production-dc3b5.up.railway.app'
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || ''
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || 'pesmetal-main'
-const WEBHOOK_URL = process.env.EVOLUTION_WEBHOOK_URL || 'https://lucid-contentment-production-17bc.up.railway.app/webhook/evolution'
+const WEBHOOK_URL = process.env.EVOLUTION_WEBHOOK_URL || 'https://pesmetal-api-production.up.railway.app/webhook/evolution'
 
 export async function POST() {
   if (!EVOLUTION_API_KEY) {

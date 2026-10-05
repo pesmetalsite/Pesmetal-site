@@ -20,13 +20,13 @@ export const whatsappRouter = asyncHandler(async (req, res, url) => {
 
   // GET /whatsapp/webhook-url — retorna a URL do webhook esperado
   if (path === '/whatsapp/webhook-url' && method === 'GET') {
-    const baseUrl = process.env.API_BASE_URL || `https://lucid-contentment-production-17bc.up.railway.app`;
+    const baseUrl = process.env.API_BASE_URL || `https://pesmetal-api-production.up.railway.app`;
     return json(res, 200, { url: `${baseUrl}/webhook/evolution` });
   }
 
   // POST /whatsapp/webhook-url — configura o webhook na Evolution API
   if (path === '/whatsapp/webhook-url' && method === 'POST') {
-    const baseUrl = process.env.API_BASE_URL || `https://lucid-contentment-production-17bc.up.railway.app`;
+    const baseUrl = process.env.API_BASE_URL || `https://pesmetal-api-production.up.railway.app`;
     const webhookUrl = `${baseUrl}/webhook/evolution`;
     try {
       await Evolution.setWebhook({

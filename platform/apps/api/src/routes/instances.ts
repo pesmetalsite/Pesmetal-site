@@ -188,7 +188,7 @@ const baseUrl = inst.evolution_api_url || process.env.EVOLUTION_API_URL;
       return json(res, 502, { error: 'Evolution API nao configurada' });
     }
 
-    const apiBase = process.env.API_BASE_URL || `https://lucid-contentment-production-17bc.up.railway.app`;
+    const apiBase = process.env.API_BASE_URL || `https://pesmetal-api-production.up.railway.app`;
     const webhookUrl = `${apiBase}/webhook/evolution`;
     const resp = await fetch(`${baseUrl}/webhook/set/${inst.instance_name}`, {
       method: 'POST',

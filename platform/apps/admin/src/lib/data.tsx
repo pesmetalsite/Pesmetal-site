@@ -43,7 +43,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!token) return
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://lucid-contentment-production-17bc.up.railway.app'
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://pesmetal-api-production.up.railway.app'
       es = new EventSource(`${API_URL}/realtime/stream`, {
         // @ts-ignore - headers não suportado nativamente
         headers: { Authorization: `Bearer ${token}` }
