@@ -49,7 +49,6 @@ function mediaUrl(url: string | null | undefined): string | null {
   if (url.startsWith('/uploads/')) return `${API_URL}${url}`
   return url
 }
-}
 
 function resolveActive(prev: any, list: any[], openIdRef: { current: string | null }): any {
   if (prev && prev._fromLink) return prev
