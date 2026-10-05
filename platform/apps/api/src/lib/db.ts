@@ -10,7 +10,7 @@ import { DatabaseSync } from 'node:sqlite';
 const DATABASE_URL = process.env.DATABASE_URL || '';
 const USE_SQLITE = !DATABASE_URL || DATABASE_URL.trim() === '';
 
-let pool: Pool | null = null;
+let pgPool: Pool | null = null;
 let sqlite: DatabaseSync | null = null;
 
 if (!USE_SQLITE) {
@@ -20,7 +20,7 @@ if (!USE_SQLITE) {
     ? DATABASE_URL.replace(/([?&])sslmode=[^&]*/g, '$1').replace(/[?&]$/, '')
     : DATABASE_URL;
 
-  pool = new Pool({
+  pgPool = new Pool({
     connectionString,
     ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
     max: 10,
@@ -31,8 +31,24 @@ if (!USE_SQLITE) {
   // SQLite fallback
   const dbPath = process.env.DATABASE_PATH || './data/pesmetal.db';
   sqlite = new DatabaseSync(dbPath);
+  // O schema e os repositories usam now() (função do Postgres).
+  // SQLite não a tem nativamente — registramos para manter o SQL compartilhado.
+  sqlite.function('now', () => new Date().toISOString());
   console.log('[db] Using SQLite at', dbPath);
 }
+
+/**
+ * Compat export: `pool` é referenciado por migrateContacts.ts e routes/migrate.ts,
+ * que só rodam em modo Postgres. Em modo SQLite, o proxy lança um erro claro.
+ */
+export const pool = new Proxy({} as Pool, {
+  get(_target, prop) {
+    if (!pgPool) {
+      throw new Error('Postgres indisponível: defina DATABASE_URL para usar pool.query()');
+    }
+    return (pgPool as any)[prop];
+  },
+});
 
 // Convert Postgres placeholders (? → $N) for compatibility
 function toPg(sql: string): string {
@@ -51,8 +67,8 @@ function normParams(params: any[]): any[] {
 
 /** Returns all rows */
 export async function q(sql: string, params: any[] = []): Promise<any[]> {
-  if (pool) {
-    const res = await pool.query(toPg(sql), normParams(params));
+  if (pgPool) {
+    const res = await pgPool.query(toPg(sql), normParams(params));
     return res.rows;
   } else if (sqlite) {
     const stmt = sqlite.prepare(sql);
@@ -70,8 +86,8 @@ export async function q1(sql: string, params: any[] = []): Promise<any> {
 
 /** Execute and return rowCount */
 export async function qe(sql: string, params: any[] = []): Promise<{ rowCount: number }> {
-  if (pool) {
-    const res = await pool.query(toPg(sql), normParams(params));
+  if (pgPool) {
+    const res = await pgPool.query(toPg(sql), normParams(params));
     return { rowCount: res.rowCount ?? 0 };
   } else if (sqlite) {
     const stmt = sqlite.prepare(sql);
@@ -83,16 +99,24 @@ export async function qe(sql: string, params: any[] = []): Promise<{ rowCount: n
 
 /** Idempotent migration: creates tables if they don't exist */
 export async function migrate(): Promise<void> {
-  if (pool) {
-    await pool.query(SCHEMA_PG);
+  if (pgPool) {
+    await pgPool.query(SCHEMA_PG);
     // Run ALTER statements for Postgres
     for (const sql of ALTERS_PG) {
-      try { await pool.query(sql); } catch {}
+      try { await pgPool.query(sql); } catch {}
     }
   } else if (sqlite) {
     sqlite.exec(SCHEMA_SQLITE);
   }
 }
+
+/**
+ * INSERT idempotente, com sintaxe correta para cada dialeto.
+ * Postgres não aceita `INSERT OR IGNORE`; SQLite não aceita `ON CONFLICT DO NOTHING`.
+ */
+const INSERT_IGNORE = pgPool
+  ? `ON CONFLICT DO NOTHING`
+  : `OR IGNORE`;
 
 /** Seed default data (idempotent) */
 export async function seedDefaults(): Promise<void> {
@@ -111,40 +135,49 @@ export async function seedDefaults(): Promise<void> {
 
   for (const s of stages) {
     await qe(
-      `INSERT OR IGNORE INTO pipeline_stages (id, name, color, position, is_initial, is_won, is_lost) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO pipeline_stages (id, name, color, position, is_initial, is_won, is_lost) VALUES (?, ?, ?, ?, ?, ?, ?) ${INSERT_IGNORE}`,
       s
     );
   }
 
   const services = [
-    ['srv_cald_leve', 'Caldeiraria Leve', 'caldeiraria-leve', 'Fabricação de estruturas metálicas leves', 'Caldeiraria', 1],
-    ['srv_cald_media', 'Caldeiraria Média', 'caldeiraria-media', 'Estruturas metálicas de médio porte', 'Caldeiraria', 2],
-    ['srv_cald_pesada', 'Caldeiraria Pesada', 'caldeiraria-pesada', 'Caldeiraria pesada para indústria', 'Caldeiraria', 3],
-    ['srv_sold', 'Soldagem', 'soldagem', 'Serviços de soldagem MIG, TIG, eletrodo', 'Soldagem', 4],
-    ['srv_usin', 'Usinagem', 'usinagem', 'Usinagem de precisão', 'Usinagem', 5],
-    ['srv_ferr', 'Ferramentaria', 'ferramentaria', 'Fabricação de ferramentas', 'Ferramentaria', 6],
-    ['srv_proj', 'Fabricação e Projetos', 'fabricacao-projetos', 'Engenharia e fabricação', 'Projetos', 7],
+    ['srv_cald_leve', 'Caldeiraria Leve', 'caldeiraria-leve', 'Fabricação de estruturas metálicas leves, suportes, gabaritos e componentes sob medida.', 'Caldeiraria', 1],
+    ['srv_cald_media', 'Caldeiraria Média', 'caldeiraria-media', 'Estruturas metálicas de médio porte, bases para equipamentos, mezaninos, escadas e plataformas.', 'Caldeiraria', 2],
+    ['srv_cald_pesada', 'Caldeiraria Pesada', 'caldeiraria-pesada', 'Caldeiraria pesada para indústria, mineração e construção civil. Estruturas robustas de grande porte.', 'Caldeiraria', 3],
+    ['srv_sold', 'Soldagem', 'soldagem', 'Serviços de soldagem MIG, TIG, eletrodo revestido e arame tubular. Soldadores qualificados.', 'Soldagem', 4],
+    ['srv_usin', 'Usinagem', 'usinagem', 'Usinagem de precisão em tornos, fresas e centros de usinagem. Peças sob desenho técnico.', 'Usinagem', 5],
+    ['srv_ferr', 'Ferramentaria', 'ferramentaria', 'Fabricação de ferramentas, dispositivos, gabaritos e fixtures para linha de produção.', 'Ferramentaria', 6],
+    ['srv_proj', 'Fabricação e Projetos', 'fabricacao-projetos', 'Engenharia e fabricação de projetos customizados, do desenho técnico à entrega final.', 'Projetos', 7],
   ];
 
   for (const s of services) {
     await qe(
-      `INSERT OR IGNORE INTO services (id, name, slug, description, category, position) VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO services (id, name, slug, description, category, position) VALUES (?, ?, ?, ?, ?, ?) ${INSERT_IGNORE}`,
       s
     );
   }
 
   const settings: Record<string, string> = {
     company_name: 'Pes Metal',
+    company_cnpj: '39.350.593.0001/51',
     company_phone: '(15) 99834-5539',
     company_whatsapp: '5515998345539',
     company_email: 'caldeirariapes@gmail.com',
-    company_address: 'R. Jaziel Azeredo Ribeiro, 365 B3 - Votorantim/SP',
+    company_address: 'R. Jaziel Azeredo Ribeiro, 365 B3 - Votorantim/SP - 18112180',
+    company_website: 'pesmetalcaldeiraria.com.br',
+    company_logo: '',
     company_business_hours: 'Segunda a Sexta, 08:00 às 18:00',
     company_experience_years: '30',
+    company_about: 'Há mais de 30 anos no mercado, a Pes Metal é referência em caldeiraria leve, média e pesada, soldagem, usinagem e fabricação de projetos industriais. Atendemos indústria, mineração, terraplenagem e construção civil com qualidade, prazo e seriedade.',
+    company_mission: '',
+    company_vision: '',
+    company_values: '',
+    whatsapp_default_message: 'Olá! Vim pelo site da Pes Metal e gostaria de um orçamento.',
+    automation_off_hours_message: 'Olá! Recebemos sua mensagem fora do nosso horário de atendimento. Retornaremos assim que possível. Nosso horário é de segunda a sexta, das 08h às 18h.',
   };
 
   for (const [k, v] of Object.entries(settings)) {
-    await qe(`INSERT OR IGNORE INTO company_settings (key, value) VALUES (?, ?)`, [k, v]);
+    await qe(`INSERT INTO company_settings (key, value) VALUES (?, ?) ${INSERT_IGNORE}`, [k, v]);
   }
 }
 
