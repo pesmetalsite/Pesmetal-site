@@ -7,6 +7,7 @@ const ALLOWED_ORIGINS = new Set([
   'https://pesmetal.com.br',
   'https://www.pesmetal.com.br',
   'https://pesmetal-server.up.railway.app',
+  'https://lucid-contentment-production-17bc.up.railway.app',
   'http://localhost:3000',
   'http://localhost:4000',
 ]);
